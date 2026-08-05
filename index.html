@@ -2,9 +2,47 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather & Air Quality Tracker</title>
+    <!-- This links to the CSS file we will create next -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Weather Tracker Coming Soon!</h1>
+    <div class="container">
+        <header>
+            <h1>Weather & AQI Tracker</h1>
+            <div class="search-box">
+                <input type="text" id="city-input" placeholder="Enter city name (e.g., Delhi)..." autocomplete="off">
+                <button id="search-btn">Search</button>
+            </div>
+        </header>
+
+        <!-- This section will stay hidden until the user searches for a city -->
+        <main id="weather-display" class="hidden">
+            <section class="current-weather">
+                <h2 id="city-name">City Name</h2>
+                <p id="temperature">--°C</p>
+                <p id="condition">Weather Condition</p>
+            </section>
+
+            <section class="details">
+                <div class="card">
+                    <h3>Air Quality Index</h3>
+                    <p id="aqi">--</p>
+                </div>
+                <div class="card">
+                    <h3>Humidity</h3>
+                    <p id="humidity">--%</p>
+                </div>
+                <div class="card">
+                    <h3>Wind Speed</h3>
+                    <p id="wind-speed">-- km/h</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- This links to the JavaScript file for our API logic -->
+    <script src="script.js"></script>
 </body>
 </html>
