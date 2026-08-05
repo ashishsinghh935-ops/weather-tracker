@@ -9,30 +9,63 @@ const humidity = document.getElementById('humidity');
 const windSpeed = document.getElementById('wind-speed');
 const aqi = document.getElementById('aqi');
 
+// Helper function to convert Open-Meteo numeric weather codes into text
+function getWeatherCondition(code) {
+    if (code === 0) return 'Clear Sky';
+    if (code >= 1 && code <= 3) return 'Partly Cloudy';
+    if (code >= 45 && code <= 48) return 'Foggy';
+    if (code >= 51 && code <= 67) return 'Rainy';
+    if (code >= 71 && code <= 77) return 'Snowy';
+    if (code >= 80 && code <= 82) return 'Rain Showers';
+    if (code >= 95) return 'Thunderstorm';
+    return 'Unknown';
+}
+
 // 2. Listen for a click on the search button
-searchBtn.addEventListener('click', () => {
-    const city = cityInput.value;
+searchBtn.addEventListener('click', async () => {
+    const city = cityInput.value.trim();
     
-    // Check if the user left the input blank
-    if (city.trim() === '') {
+    if (city === '') {
         alert('Please enter a city name!');
         return;
     }
 
-    // 3. Simulate fetching data from a weather API 
-    // (We can replace this with a real API like OpenWeatherMap later!)
-    cityName.textContent = city.charAt(0).toUpperCase() + city.slice(1);
-    
-    // Generate random but realistic weather numbers for testing
-    temperature.textContent = Math.floor(Math.random() * 15 + 20) + '°C'; 
-    condition.textContent = 'Partly Cloudy';
-    humidity.textContent = Math.floor(Math.random() * 30 + 40) + '%';
-    windSpeed.textContent = Math.floor(Math.random() * 15 + 5) + ' km/h';
-    aqi.textContent = Math.floor(Math.random() * 100 + 40);
+    try {
+        // Step 1: Geocoding (Convert city name to Latitude & Longitude)
+        const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&format=json`);
+        const geoData = await geoResponse.json();
 
-    // 4. Remove the 'hidden' class to show the weather card
-    weatherDisplay.classList.remove('hidden');
-    
-    // Clear the input box
-    cityInput.value = '';
+        // Check if the API found the city
+        if (!geoData.results || geoData.results.length === 0) {
+            alert('City not found. Please try again!');
+            return;
+        }
+
+        const { latitude, longitude, name, country } = geoData.results[0];
+        cityName.textContent = `${name}, ${country}`;
+
+        // Step 2: Fetch Current Weather Data
+        const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`);
+        const weatherData = await weatherResponse.json();
+        const current = weatherData.current;
+
+        temperature.textContent = `${Math.round(current.temperature_2m)}°C`;
+        condition.textContent = getWeatherCondition(current.weather_code);
+        humidity.textContent = `${current.relative_humidity_2m}%`;
+        windSpeed.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
+
+        // Step 3: Fetch Air Quality Data (US AQI)
+        const aqiResponse = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${latitude}&longitude=${longitude}&current=us_aqi`);
+        const aqiData = await aqiResponse.json();
+
+        aqi.textContent = aqiData.current.us_aqi;
+
+        // Show the weather card on the screen
+        weatherDisplay.classList.remove('hidden');
+        cityInput.value = '';
+
+    } catch (error) {
+        console.error('Error fetching data:', error);
+        alert('Something went wrong while fetching the live weather data.');
+    }
 });
