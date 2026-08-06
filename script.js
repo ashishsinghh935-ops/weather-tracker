@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
 function initApp() {
     setupEventListeners();
     renderSavedCities();
-    // Fetch default location (Delhi) on load
+    // Fetch default location on load
     fetchDashboardData(state.currentLocation.lat, state.currentLocation.lon, state.currentLocation.name);
 }
 
@@ -137,6 +137,18 @@ function setupEventListeners() {
     };
     DOM.bookmarkBtn.addEventListener('click', saveLocationHandler);
     DOM.addFavoriteBtn.addEventListener('click', saveLocationHandler);
+    
+    // Handle Navigation Menu Links (Coming Soon)
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevents the page from jumping
+            const linkText = e.currentTarget.querySelector('span').textContent;
+            if (linkText !== 'Dashboard') {
+                showToast(`${linkText} module is coming soon!`, 'info');
+            }
+        });
+    });
 }
 
 // ==========================================================================
@@ -150,7 +162,7 @@ async function handleSearch(query) {
         if (data.results && data.results.length > 0) {
             renderSuggestions(data.results);
         } else {
-            DOM.suggestionsList.innerHTML = '<li class="empty-state">No locations found</li>';
+            DOM.suggestionsList.innerHTML = '<li class="empty-state" style="padding: 1rem;">No locations found</li>';
             DOM.suggestionsList.classList.remove('hidden');
         }
     } catch (error) {
@@ -166,7 +178,7 @@ async function fetchDashboardData(lat, lon, cityName) {
     DOM.loadingState.style.display = 'flex';
 
     try {
-        // Fetch Primary Weather Data (Current, Hourly, Daily)
+        // Fetch Primary Weather Data
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,visibility,dew_point_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
         
         // Fetch AQI Data
@@ -218,7 +230,7 @@ function renderSuggestions(results) {
         const adminStr = city.admin1 ? `${city.admin1}, ` : '';
         const fullName = `${city.name}, ${adminStr}${city.country}`;
         
-        li.innerHTML = `<i class="fa-solid fa-location-dot"></i> <span>${fullName}</span>`;
+        li.innerHTML = `<i class="fa-solid fa-location-dot"></i> <span style="margin-left: 8px;">${fullName}</span>`;
         li.addEventListener('click', () => {
             DOM.searchInput.value = '';
             DOM.clearSearchBtn.classList.add('hidden');
@@ -260,7 +272,6 @@ function updateHeroSection(current, daily) {
 }
 
 function updateHighlights(current, hourly, daily, aqiCurrent) {
-    // 1. AQI
     const aqi = aqiCurrent.us_aqi;
     DOM.aqiValue.textContent = aqi || "--";
     const aqiInfo = getAQIStatus(aqi);
@@ -269,17 +280,13 @@ function updateHighlights(current, hourly, daily, aqiCurrent) {
     DOM.aqiBadge.style.color = '#fff';
     DOM.aqiRec.textContent = aqiInfo.advice;
 
-    // 2. Wind
     DOM.windSpeed.textContent = Math.round(current.wind_speed_10m);
     DOM.windDir.textContent = getWindDirection(current.wind_direction_10m);
 
-    // 3. Humidity & Dew Point
     DOM.humidity.textContent = current.relative_humidity_2m;
-    // Get current hour index to fetch correct dew point
     const currentHour = new Date().getHours();
     DOM.dewPoint.textContent = `${Math.round(hourly.dew_point_2m[currentHour])}°C`;
 
-    // 4. UV Index
     const uv = Math.round(daily.uv_index_max[0]);
     DOM.uvIndex.textContent = uv;
     const uvInfo = getUVStatus(uv);
@@ -288,11 +295,9 @@ function updateHighlights(current, hourly, daily, aqiCurrent) {
     DOM.uvBadge.style.color = '#fff';
     DOM.uvAdvice.textContent = uvInfo.advice;
 
-    // 5. Pressure
     DOM.pressure.textContent = Math.round(current.surface_pressure);
     DOM.pressureTrend.textContent = current.surface_pressure > 1013 ? "Higher than standard." : "Lower than standard.";
 
-    // 6. Visibility
     const visKm = (hourly.visibility[currentHour] / 1000).toFixed(1);
     DOM.visibility.textContent = visKm;
     DOM.visibilityStatus.textContent = visKm > 8 ? "Perfectly clear view." : "Visibility is slightly reduced.";
@@ -302,17 +307,16 @@ function updateHourlyForecast(hourly) {
     DOM.hourlyContainer.innerHTML = '';
     const currentHourIdx = new Date().getHours();
     
-    // Show next 24 hours
     for (let i = currentHourIdx; i < currentHourIdx + 24; i++) {
         const timeStr = new Date(hourly.time[i]).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
         const temp = Math.round(hourly.temperature_2m[i]);
-        const weatherInfo = getWeatherDetails(hourly.weather_code[i], true); // defaulting to day icon for simplicity in hourly
+        const weatherInfo = getWeatherDetails(hourly.weather_code[i], true); 
         
         const card = document.createElement('div');
         card.className = 'hourly-card';
         card.innerHTML = `
             <p class="hourly-time">${i === currentHourIdx ? 'Now' : timeStr}</p>
-            <i class="${weatherInfo.iconClass} hourly-icon"></i>
+            <i class="${weatherInfo.iconClass} hourly-icon" style="margin: 8px 0; font-size: 1.2rem;"></i>
             <p class="hourly-temp">${temp}°</p>
         `;
         DOM.hourlyContainer.appendChild(card);
@@ -322,7 +326,6 @@ function updateHourlyForecast(hourly) {
 function updateDailyForecast(daily) {
     DOM.forecastContainer.innerHTML = '';
     
-    // Skip index 0 (today), show next 6 days
     for (let i = 1; i <= 6; i++) {
         const date = new Date(daily.time[i]);
         const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
@@ -334,20 +337,19 @@ function updateDailyForecast(daily) {
         row.className = 'forecast-row';
         row.innerHTML = `
             <span class="day-name">${dayName}</span>
-            <div class="forecast-condition-group">
+            <div class="forecast-condition-group" style="display: flex; align-items: center; gap: 8px;">
                 <i class="${weatherInfo.iconClass} weather-icon"></i>
                 <span class="condition-text">${weatherInfo.text}</span>
             </div>
             <div class="temp-range">
                 <span class="temp-min">${min}°</span>
-                <div class="temp-bar-bg"><div class="temp-bar-fill"></div></div>
+                <span style="margin: 0 8px;">-</span>
                 <span class="temp-max">${max}°</span>
             </div>
         `;
         DOM.forecastContainer.appendChild(row);
     }
     
-    // Update Advisory based on tomorrow's weather
     const tmrwCondition = getWeatherDetails(daily.weather_code[1], true).text;
     DOM.advisoryText.innerHTML = `Expect <strong>${tmrwCondition.toLowerCase()}</strong> conditions tomorrow. Highs will reach ${Math.round(daily.temperature_2m_max[1])}°C.`;
 }
@@ -375,15 +377,17 @@ function renderSavedCities() {
     DOM.savedCitiesList.innerHTML = '';
     
     if (state.savedCities.length === 0) {
-        DOM.savedCitiesList.innerHTML = '<li class="empty-saved-state">No pinned locations yet</li>';
+        DOM.savedCitiesList.innerHTML = '<li class="empty-saved-state" style="font-size: 0.85rem; color: #666;">No pinned locations yet</li>';
         return;
     }
 
     state.savedCities.forEach(city => {
         const li = document.createElement('li');
         li.className = 'saved-city-item';
+        li.style.cursor = 'pointer';
+        li.style.padding = '8px 0';
         li.innerHTML = `
-            <span class="saved-city-name"><i class="fa-solid fa-map-pin"></i> ${city.name.split(',')[0]}</span>
+            <span class="saved-city-name"><i class="fa-solid fa-map-pin" style="margin-right: 6px; color: var(--accent-primary);"></i> ${city.name.split(',')[0]}</span>
         `;
         
         li.addEventListener('click', () => {
@@ -467,15 +471,24 @@ function showToast(message, type = 'info') {
     if (type === 'success') icon = 'fa-circle-check';
     if (type === 'error') icon = 'fa-circle-xmark';
 
-    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span style="margin-left: 8px;">${message}</span>`;
+    
+    // Quick inline styles in case CSS isn't fully loaded yet
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.right = '20px';
+    toast.style.backgroundColor = '#333';
+    toast.style.color = '#fff';
+    toast.style.padding = '12px 24px';
+    toast.style.borderRadius = '8px';
+    toast.style.zIndex = '9999';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+    toast.style.transition = 'opacity 0.3s ease';
     
     DOM.toastContainer.appendChild(toast);
     
-    // Trigger reflow for animation
-    setTimeout(() => toast.classList.add('show'), 10);
-    
     setTimeout(() => {
-        toast.classList.remove('show');
+        toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
