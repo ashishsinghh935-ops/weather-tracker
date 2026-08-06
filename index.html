@@ -3,67 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather & Air Quality Tracker</title>
-    <!-- This links to the CSS file -->
+    <title>Professional Weather Dashboard</title>
     <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for crisp, professional icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Weather & AQI Tracker</h1>
-            
-            <!-- NEW: Dropdowns instead of text input -->
-            <div class="search-box">
-                <select id="state-select">
-                    <option value="">Select a State...</option>
-                    <option value="Delhi">Delhi</option>
-                    <option value="Maharashtra">Maharashtra</option>
-                    <option value="Karnataka">Karnataka</option>
-                    <option value="Uttar Pradesh">Uttar Pradesh</option>
-                </select>
-                <select id="city-select" disabled>
-                    <option value="">Select a City...</option>
-                </select>
-                <button id="search-btn">Search</button>
+    <div class="app-container">
+        
+        <!-- SIDEBAR: Navigation & Search -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-cloud-sun-rain"></i>
+                <h2>WeatherPro</h2>
             </div>
-        </header>
-
-        <!-- This section will stay hidden until the user searches -->
-        <main id="weather-display" class="hidden">
             
-            <section class="current-weather">
-                <h2 id="city-name">City Name</h2>
-                <p id="temperature">--°C</p>
-                <p id="condition">Weather Condition</p>
-            </section>
+            <div class="search-wrapper">
+                <div class="search-input-box">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="city-input" placeholder="Search for cities..." autocomplete="off">
+                </div>
+                <!-- Autocomplete Suggestions Dropdown -->
+                <ul id="suggestions-list" class="suggestions-dropdown hidden"></ul>
+            </div>
 
-            <section class="details">
-                <div class="card">
-                    <h3>Air Quality Index</h3>
-                    <p id="aqi">--</p>
-                </div>
-                <div class="card">
-                    <h3>Humidity</h3>
-                    <p id="humidity">--%</p>
-                </div>
-                <div class="card">
-                    <h3>Wind Speed</h3>
-                    <p id="wind-speed">-- km/h</p>
-                </div>
-            </section>
+            <div class="saved-locations">
+                <h3>Saved Locations</h3>
+                <ul id="saved-cities-list">
+                    <!-- JavaScript will eventually inject saved cities here -->
+                </ul>
+            </div>
+        </aside>
 
-            <!-- NEW: 5-Day Forecast Section -->
-            <section class="forecast-section">
-                <h3>5-Day Forecast</h3>
-                <div id="forecast-container" class="forecast-container">
-                    <!-- JavaScript will inject forecast cards here -->
-                </div>
-            </section>
+        <!-- MAIN CONTENT: Weather Data -->
+        <main class="main-dashboard hidden" id="weather-display">
             
+            <!-- Top Header: Location and Current Date -->
+            <header class="dashboard-header">
+                <div class="location-info">
+                    <h1 id="city-name">Delhi, India</h1>
+                    <p id="current-date">Today</p>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                
+                <!-- LEFT COLUMN: Current Weather & Highlights -->
+                <div class="left-column">
+                    <!-- Hero Section -->
+                    <section class="current-weather-hero">
+                        <div class="weather-main">
+                            <div class="temp-block">
+                                <h2 id="temperature">--°C</h2>
+                                <p id="condition">--</p>
+                            </div>
+                            <div class="weather-icon-large">
+                                <i id="main-weather-icon" class="fa-solid fa-cloud"></i>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Highlights / Metrics Grid -->
+                    <section class="todays-highlights">
+                        <h3>Today's Highlights</h3>
+                        <div class="highlights-grid">
+                            
+                            <div class="highlight-card">
+                                <p class="card-title">Air Quality Index</p>
+                                <div class="card-value-wrapper">
+                                    <i class="fa-solid fa-leaf"></i>
+                                    <h3 id="aqi">--</h3>
+                                </div>
+                            </div>
+                            
+                            <div class="highlight-card">
+                                <p class="card-title">Wind Status</p>
+                                <div class="card-value-wrapper">
+                                    <i class="fa-solid fa-wind"></i>
+                                    <h3><span id="wind-speed">--</span> <span class="unit">km/h</span></h3>
+                                </div>
+                            </div>
+
+                            <div class="highlight-card">
+                                <p class="card-title">Humidity</p>
+                                <div class="card-value-wrapper">
+                                    <i class="fa-solid fa-droplet"></i>
+                                    <h3><span id="humidity">--</span><span class="unit">%</span></h3>
+                                </div>
+                            </div>
+
+                            <div class="highlight-card">
+                                <p class="card-title">UV Index</p>
+                                <div class="card-value-wrapper">
+                                    <i class="fa-solid fa-sun"></i>
+                                    <h3 id="uv-index">--</h3>
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </section>
+                </div>
+
+                <!-- RIGHT COLUMN: Extended Forecast -->
+                <div class="right-column">
+                    <section class="forecast-section">
+                        <h3>5-Day Forecast</h3>
+                        <div id="forecast-container" class="forecast-list">
+                            <!-- JavaScript will inject the forecast rows here -->
+                        </div>
+                    </section>
+                </div>
+                
+            </div>
         </main>
     </div>
 
-    <!-- This links to the JavaScript file -->
     <script src="script.js"></script>
 </body>
 </html>
