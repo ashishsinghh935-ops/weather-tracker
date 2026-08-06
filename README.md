@@ -1,4 +1,4 @@
-# 🌤️ WeatherPro Dashboard
+# 🌤️ WeatherPro 
 
 A professional, enterprise-grade weather analytics dashboard built with modern web technologies. It provides real-time environmental data, a 24-hour forecast track, and a 7-day outlook with a sleek, responsive UI.
 
@@ -23,6 +23,6 @@ A professional, enterprise-grade weather analytics dashboard built with modern w
    ```bash
    git clone [https://github.com/ashishsingh935-ops/weather-tracker.git](https://github.com/ashishsingh935-ops/weather-tracker.git)```
 
-   
+
  Open the project directory in VS Code.
 Open index.html using a Live Server extension to view the dashboard.
