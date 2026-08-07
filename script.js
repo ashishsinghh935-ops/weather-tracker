@@ -202,10 +202,10 @@ function initMap(lat, lon, cityName) {
     // Initialize New Map
     weatherMap = L.map('map').setView([lat, lon], 10);
 
-    // Standard OpenStreetMap Tile Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Fast, minimalist CartoDB tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors & CARTO'
     }).addTo(weatherMap);
 
     // Add Marker
