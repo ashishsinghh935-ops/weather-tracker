@@ -11,6 +11,9 @@
     
     <!-- FontAwesome Pro/Free Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    
+    <!-- Leaflet CSS for Interactive Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 <body>
     
@@ -137,7 +140,7 @@
             </header>
 
             <!-- DASHBOARD GRID CONTAINER -->
-            <div class="dashboard-grid">
+            <div id="dashboard-view" class="dashboard-grid">
                 
                 <!-- ======================================================= -->
                 <!-- LEFT CONTENT COLUMN (Primary Metrics)                  -->
@@ -197,7 +200,6 @@
                         </div>
                         
                         <div class="highlights-grid">
-                            
                             <!-- Card 1: Air Quality Index -->
                             <article class="highlight-card">
                                 <div class="card-header">
@@ -209,7 +211,7 @@
                                         <h4 id="aqi-value">--</h4>
                                         <span id="aqi-status-badge" class="status-badge">Moderate</span>
                                     </div>
-                                    <p class="card-footnote" id="aqi-recommendation">Air quality is acceptable for most people.</p>
+                                    <p class="card-footnote" id="aqi-recommendation">Air quality is acceptable.</p>
                                 </div>
                             </article>
 
@@ -288,7 +290,6 @@
 
                         </div>
                     </section>
-
                 </div>
 
                 <!-- ======================================================= -->
@@ -313,18 +314,28 @@
                             <i class="fa-solid fa-circle-info"></i>
                             <h4>Daily Advisory</h4>
                         </div>
-                        <p id="advisory-text">Loading recommendations based on current weather conditions...</p>
+                        <p id="advisory-text">Loading recommendations...</p>
                     </section>
 
                 </div>
-
             </div>
+
+            <!-- =================================================================== -->
+            <!-- WEATHER MAP SECTION (Hidden by Default)                             -->
+            <!-- =================================================================== -->
+            <section id="weather-map-section" class="map-section hidden">
+                <div class="panel-header" style="margin-bottom: 1rem;">
+                    <h3 style="font-size: 1.2rem;"><i class="fa-solid fa-map-location-dot"></i> Interactive Weather Map</h3>
+                </div>
+                <div id="map" class="map-container"></div>
+            </section>
+
         </main>
 
         <!-- =================================================================== -->
         <!-- 3. INITIAL LOADING STATE & EMPTY STATE                              -->
         <!-- =================================================================== -->
-        <div id="loading-state" class="center-state-container">
+        <div id="loading-state" class="center-state-container" style="display: none;">
             <div class="spinner-loader"></div>
             <h3>Fetching Weather Analytics...</h3>
             <p>Please search for a city or allow location access.</p>
@@ -335,6 +346,9 @@
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Leaflet JS for Interactive Map -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
     <!-- Application Script Link -->
     <script src="script.js"></script>
 </body>
