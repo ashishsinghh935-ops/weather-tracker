@@ -1,6 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
- * Handles API fetching, DOM manipulation, state management, and user interactions.
+ * Handles API fetching, DOM manipulation, state management, Leaflet Maps, and user interactions.
  */
 
 // ==========================================================================
@@ -17,6 +17,10 @@ const state = {
     isFetching: false
 };
 
+// Global Map Variables
+let weatherMap = null;
+let mapMarker = null;
+
 // ==========================================================================
 // 2. DOM ELEMENT SELECTORS
 // ==========================================================================
@@ -29,9 +33,11 @@ const DOM = {
     addFavoriteBtn: document.getElementById('add-favorite-btn'),
     bookmarkBtn: document.getElementById('bookmark-btn'),
     
-    // Layout States
+    // Layout States & Views
     loadingState: document.getElementById('loading-state'),
     mainDashboard: document.getElementById('weather-display'),
+    dashboardView: document.getElementById('dashboard-view'),
+    mapSection: document.getElementById('weather-map-section'),
     refreshBtn: document.getElementById('refresh-data-btn'),
     toastContainer: document.getElementById('toast-container'),
     
@@ -89,7 +95,7 @@ function initApp() {
 }
 
 // ==========================================================================
-// 4. EVENT LISTENERS
+// 4. EVENT LISTENERS & NAVIGATION LOGIC
 // ==========================================================================
 function setupEventListeners() {
     let searchTimeout;
@@ -138,13 +144,37 @@ function setupEventListeners() {
     DOM.bookmarkBtn.addEventListener('click', saveLocationHandler);
     DOM.addFavoriteBtn.addEventListener('click', saveLocationHandler);
     
-    // Handle Navigation Menu Links (Coming Soon)
+    // Handle Navigation Menu Links (Dashboard vs Map)
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
-            e.preventDefault(); // Prevents the page from jumping
+            e.preventDefault();
+            
+            // Update Active Class
+            navLinks.forEach(l => l.parentElement.classList.remove('active'));
+            e.currentTarget.parentElement.classList.add('active');
+            
             const linkText = e.currentTarget.querySelector('span').textContent;
-            if (linkText !== 'Dashboard') {
+            
+            if (linkText === 'Dashboard') {
+                DOM.mapSection.classList.add('hidden');
+                DOM.dashboardView.classList.remove('hidden');
+            } 
+            else if (linkText === 'Weather Map') {
+                DOM.dashboardView.classList.add('hidden');
+                DOM.mapSection.classList.remove('hidden');
+                
+                // Initialize or refresh map
+                initMap(state.currentLocation.lat, state.currentLocation.lon, state.currentLocation.name);
+                
+                // Leaflet workaround: Maps rendering in hidden divs need their size invalidated once visible
+                setTimeout(() => {
+                    if (weatherMap) weatherMap.invalidateSize();
+                }, 100);
+                
+                showToast("Interactive weather map loaded", "success");
+            } 
+            else {
                 showToast(`${linkText} module is coming soon!`, 'info');
             }
         });
@@ -152,7 +182,40 @@ function setupEventListeners() {
 }
 
 // ==========================================================================
-// 5. API FETCHING LOGIC
+// 5. LEAFLET MAP LOGIC
+// ==========================================================================
+function initMap(lat, lon, cityName) {
+    const mapContainer = document.getElementById('map');
+    if (!mapContainer) return;
+
+    // If map already exists, update view and marker
+    if (weatherMap) {
+        weatherMap.setView([lat, lon], 10);
+        if (mapMarker) {
+            mapMarker.setLatLng([lat, lon])
+                     .setPopupContent(`<b>${cityName}</b>`)
+                     .openPopup();
+        }
+        return;
+    }
+
+    // Initialize New Map
+    weatherMap = L.map('map').setView([lat, lon], 10);
+
+    // Standard OpenStreetMap Tile Layer
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(weatherMap);
+
+    // Add Marker
+    mapMarker = L.marker([lat, lon]).addTo(weatherMap)
+        .bindPopup(`<b>${cityName}</b>`)
+        .openPopup();
+}
+
+// ==========================================================================
+// 6. API FETCHING LOGIC
 // ==========================================================================
 async function handleSearch(query) {
     try {
@@ -174,8 +237,11 @@ async function fetchDashboardData(lat, lon, cityName) {
     if (state.isFetching) return;
     state.isFetching = true;
     
-    DOM.mainDashboard.classList.add('hidden');
-    DOM.loadingState.style.display = 'flex';
+    // Show loading state if we are currently on the dashboard view
+    if (!DOM.dashboardView.classList.contains('hidden')) {
+        DOM.mainDashboard.classList.add('hidden');
+        DOM.loadingState.style.display = 'flex';
+    }
 
     try {
         // Fetch Primary Weather Data
@@ -204,6 +270,11 @@ async function fetchDashboardData(lat, lon, cityName) {
         updateHourlyForecast(weatherData.hourly);
         updateDailyForecast(weatherData.daily);
         updateBookmarkStatus();
+        
+        // Update map silently in background if initialized
+        if (weatherMap) {
+            initMap(lat, lon, cityName);
+        }
 
         // Reveal Dashboard
         DOM.loadingState.style.display = 'none';
@@ -220,7 +291,7 @@ async function fetchDashboardData(lat, lon, cityName) {
 }
 
 // ==========================================================================
-// 6. UI RENDER FUNCTIONS
+// 7. UI RENDER FUNCTIONS
 // ==========================================================================
 function renderSuggestions(results) {
     DOM.suggestionsList.innerHTML = '';
@@ -355,7 +426,7 @@ function updateDailyForecast(daily) {
 }
 
 // ==========================================================================
-// 7. SAVED LOCATIONS LOGIC (LOCALSTORAGE)
+// 8. SAVED LOCATIONS LOGIC (LOCALSTORAGE)
 // ==========================================================================
 function toggleSavedCity(cityObj) {
     const existingIndex = state.savedCities.findIndex(c => c.name === cityObj.name);
@@ -408,7 +479,7 @@ function updateBookmarkStatus() {
 }
 
 // ==========================================================================
-// 8. UTILITY & HELPER FUNCTIONS
+// 9. UTILITY & HELPER FUNCTIONS
 // ==========================================================================
 function getWeatherDetails(code, isDay) {
     const weatherMap = {
@@ -473,7 +544,6 @@ function showToast(message, type = 'info') {
 
     toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span style="margin-left: 8px;">${message}</span>`;
     
-    // Quick inline styles in case CSS isn't fully loaded yet
     toast.style.position = 'fixed';
     toast.style.bottom = '20px';
     toast.style.right = '20px';
