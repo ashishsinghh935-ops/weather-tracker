@@ -3,62 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Professional Weather and Environmental Monitoring Dashboard">
     <title>WeatherPro | Professional Weather Analytics</title>
     
-    <!-- External Stylesheets -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- FontAwesome Pro/Free Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
-    
-    <!-- Leaflet CSS for Interactive Map -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
 <body>
     
-    <!-- MAIN APP WRAPPER -->
     <div class="app-container">
         
-        <!-- =================================================================== -->
-        <!-- 1. SIDEBAR NAVIGATION                                               -->
-        <!-- =================================================================== -->
-        <aside class="sidebar" aria-label="Main Navigation">
-            
-            <!-- Brand Logo Header -->
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
             <div class="brand-header">
-                <div class="brand-logo">
-                    <i class="fa-solid fa-cloud-bolt"></i>
-                </div>
+                <div class="brand-logo"><i class="fa-solid fa-cloud-bolt"></i></div>
                 <div class="brand-text">
                     <h2>WeatherPro</h2>
                     <span class="badge-pro">Enterprise</span>
                 </div>
             </div>
 
-            <!-- Search Bar Component -->
             <div class="sidebar-search">
                 <div class="search-input-wrapper">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input 
-                        type="text" 
-                        id="city-input" 
-                        placeholder="Search city, state, or country..." 
-                        autocomplete="off"
-                        aria-label="Search city location"
-                    >
-                    <button id="clear-search-btn" class="clear-btn hidden" title="Clear input">
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
+                    <input type="text" id="city-input" placeholder="Search city, state..." autocomplete="off">
+                    <button id="clear-search-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                
-                <!-- Autocomplete Dropdown List -->
-                <ul id="suggestions-list" class="suggestions-dropdown hidden" role="listbox">
-                    <!-- JavaScript dynamically injects <li> items here -->
-                </ul>
+                <ul id="suggestions-list" class="suggestions-dropdown hidden"></ul>
             </div>
 
-            <!-- Navigation Links -->
             <nav class="nav-menu">
                 <p class="nav-title">Menu</p>
                 <ul class="nav-list">
@@ -77,52 +50,31 @@
                     <li class="nav-item">
                         <a href="#" class="nav-link">
                             <i class="fa-solid fa-wind"></i>
-                            <span>Air Quality Radar</span>
+                            <span>Air Quality Analytics</span>
                         </a>
                     </li>
                 </ul>
             </nav>
 
-            <!-- Saved Favorites / Pin Section -->
             <div class="saved-locations-section">
                 <div class="section-header">
                     <p class="nav-title">Saved Cities</p>
-                    <button id="add-favorite-btn" class="icon-btn-sm" title="Pin Current City">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
+                    <button id="add-favorite-btn" class="icon-btn-sm"><i class="fa-solid fa-plus"></i></button>
                 </div>
                 <ul id="saved-cities-list" class="saved-cities-list">
-                    <!-- Dynamically populated or empty state placeholder -->
                     <li class="empty-saved-state">No pinned locations yet</li>
                 </ul>
             </div>
-
-            <!-- Unit System & Preferences Toggle -->
-            <div class="sidebar-footer">
-                <div class="unit-toggle-container">
-                    <span class="toggle-label">Units</span>
-                    <div class="toggle-buttons">
-                        <button id="unit-celsius" class="toggle-btn active">°C</button>
-                        <button id="unit-fahrenheit" class="toggle-btn">°F</button>
-                    </div>
-                </div>
-            </div>
-
         </aside>
 
-        <!-- =================================================================== -->
-        <!-- 2. MAIN DASHBOARD CONTENT AREA                                      -->
-        <!-- =================================================================== -->
-        <main class="main-dashboard hidden" id="weather-display" role="main">
+        <!-- MAIN CONTENT AREA -->
+        <main class="main-dashboard hidden" id="weather-display">
             
-            <!-- Top Dashboard Header Bar -->
             <header class="dashboard-header">
                 <div class="location-heading">
                     <div class="title-with-flag">
                         <h1 id="city-name">Delhi, India</h1>
-                        <button id="bookmark-btn" class="bookmark-btn" title="Save Location">
-                            <i class="fa-regular fa-bookmark"></i>
-                        </button>
+                        <button id="bookmark-btn" class="bookmark-btn"><i class="fa-regular fa-bookmark"></i></button>
                     </div>
                     <div class="location-metadata">
                         <span id="current-date"><i class="fa-regular fa-calendar"></i> Loading date...</span>
@@ -130,24 +82,16 @@
                         <span id="last-updated-time"><i class="fa-regular fa-clock"></i> Updated just now</span>
                     </div>
                 </div>
-
                 <div class="header-actions">
-                    <button id="refresh-data-btn" class="action-btn" title="Refresh Live Data">
-                        <i class="fa-solid fa-rotate-right"></i>
-                        <span>Refresh</span>
+                    <button id="refresh-data-btn" class="action-btn">
+                        <i class="fa-solid fa-rotate-right"></i> <span>Refresh</span>
                     </button>
                 </div>
             </header>
 
-            <!-- DASHBOARD GRID CONTAINER -->
+            <!-- VIEW 1: DASHBOARD GRID -->
             <div id="dashboard-view" class="dashboard-grid">
-                
-                <!-- ======================================================= -->
-                <!-- LEFT CONTENT COLUMN (Primary Metrics)                  -->
-                <!-- ======================================================= -->
                 <div class="left-column">
-                    
-                    <!-- HERO CARD: Main Temperature & Conditions -->
                     <section class="hero-weather-card">
                         <div class="hero-top-info">
                             <div class="temp-display">
@@ -157,172 +101,86 @@
                                     <p class="feels-like">Feels like <span id="feels-like-temp">--°C</span></p>
                                 </div>
                             </div>
-                            <div class="hero-weather-icon">
-                                <i id="main-weather-icon" class="fa-solid fa-sun"></i>
-                            </div>
+                            <div class="hero-weather-icon"><i id="main-weather-icon" class="fa-solid fa-sun"></i></div>
                         </div>
-
-                        <!-- Hero Footer: Temp Ranges & Sun Schedule -->
                         <div class="hero-bottom-info">
-                            <div class="hero-stat">
-                                <i class="fa-solid fa-arrow-up"></i>
-                                <span>High: <strong id="temp-max">--°C</strong></span>
-                            </div>
-                            <div class="hero-stat">
-                                <i class="fa-solid fa-arrow-down"></i>
-                                <span>Low: <strong id="temp-min">--°C</strong></span>
-                            </div>
-                            <div class="hero-stat">
-                                <i class="fa-solid fa-sun-plant-wilt"></i>
-                                <span>Sunrise: <strong id="sunrise-time">--:-- AM</strong></span>
-                            </div>
-                            <div class="hero-stat">
-                                <i class="fa-solid fa-moon"></i>
-                                <span>Sunset: <strong id="sunset-time">--:-- PM</strong></span>
-                            </div>
+                            <div class="hero-stat"><i class="fa-solid fa-arrow-up"></i> <span>High: <strong id="temp-max">--°C</strong></span></div>
+                            <div class="hero-stat"><i class="fa-solid fa-arrow-down"></i> <span>Low: <strong id="temp-min">--°C</strong></span></div>
+                            <div class="hero-stat"><i class="fa-solid fa-sun-plant-wilt"></i> <span>Sunrise: <strong id="sunrise-time">--:--</strong></span></div>
+                            <div class="hero-stat"><i class="fa-solid fa-moon"></i> <span>Sunset: <strong id="sunset-time">--:--</strong></span></div>
                         </div>
                     </section>
 
-                    <!-- HOURLY FORECAST SCROLL TRACK -->
                     <section class="hourly-forecast-section">
                         <div class="section-title-wrapper">
                             <h3><i class="fa-regular fa-clock"></i> 24-Hour Forecast</h3>
                         </div>
-                        <div id="hourly-container" class="hourly-scroll-track">
-                            <!-- JS will inject 24 hourly cards here -->
-                        </div>
+                        <div id="hourly-container" class="hourly-scroll-track"></div>
                     </section>
 
-                    <!-- TODAY'S HIGHLIGHTS GRID (6 Cards) -->
                     <section class="highlights-section">
                         <div class="section-title-wrapper">
                             <h3><i class="fa-solid fa-sliders"></i> Today's Highlights</h3>
                         </div>
-                        
                         <div class="highlights-grid">
-                            <!-- Card 1: Air Quality Index -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">Air Quality Index</span>
-                                    <i class="fa-solid fa-leaf card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">Air Quality Index</span><i class="fa-solid fa-leaf card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4 id="aqi-value">--</h4>
-                                        <span id="aqi-status-badge" class="status-badge">Moderate</span>
-                                    </div>
-                                    <p class="card-footnote" id="aqi-recommendation">Air quality is acceptable.</p>
+                                    <div class="metric-main"><h4 id="aqi-value">--</h4><span id="aqi-status-badge" class="status-badge">--</span></div>
+                                    <p class="card-footnote" id="aqi-recommendation">--</p>
                                 </div>
                             </article>
-
-                            <!-- Card 2: Wind Status & Gusts -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">Wind Status</span>
-                                    <i class="fa-solid fa-wind card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">Wind Status</span><i class="fa-solid fa-wind card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4><span id="wind-speed">--</span> <small>km/h</small></h4>
-                                    </div>
-                                    <div class="card-submetrics">
-                                        <span>Direction: <strong id="wind-direction">--</strong></span>
-                                    </div>
+                                    <div class="metric-main"><h4><span id="wind-speed">--</span> <small>km/h</small></h4></div>
+                                    <div class="card-submetrics"><span>Direction: <strong id="wind-direction">--</strong></span></div>
                                 </div>
                             </article>
-
-                            <!-- Card 3: Humidity & Dew Point -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">Humidity</span>
-                                    <i class="fa-solid fa-droplet card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">Humidity</span><i class="fa-solid fa-droplet card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4><span id="humidity-value">--</span><small>%</small></h4>
-                                    </div>
+                                    <div class="metric-main"><h4><span id="humidity-value">--</span><small>%</small></h4></div>
                                     <p class="card-footnote">Dew point is <span id="dew-point">--°C</span> right now.</p>
                                 </div>
                             </article>
-
-                            <!-- Card 4: UV Index -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">UV Index</span>
-                                    <i class="fa-solid fa-sun card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">UV Index</span><i class="fa-solid fa-sun card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4 id="uv-index-value">--</h4>
-                                        <span id="uv-risk-badge" class="status-badge">Low</span>
-                                    </div>
-                                    <p class="card-footnote" id="uv-advice">No protection required.</p>
+                                    <div class="metric-main"><h4 id="uv-index-value">--</h4><span id="uv-risk-badge" class="status-badge">--</span></div>
+                                    <p class="card-footnote" id="uv-advice">--</p>
                                 </div>
                             </article>
-
-                            <!-- Card 5: Atmospheric Pressure -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">Pressure</span>
-                                    <i class="fa-solid fa-gauge-high card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">Pressure</span><i class="fa-solid fa-gauge-high card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4><span id="pressure-value">--</span> <small>hPa</small></h4>
-                                    </div>
-                                    <p class="card-footnote" id="pressure-trend">Normal atmospheric pressure.</p>
+                                    <div class="metric-main"><h4><span id="pressure-value">--</span> <small>hPa</small></h4></div>
+                                    <p class="card-footnote" id="pressure-trend">--</p>
                                 </div>
                             </article>
-
-                            <!-- Card 6: Visibility -->
                             <article class="highlight-card">
-                                <div class="card-header">
-                                    <span class="card-title">Visibility</span>
-                                    <i class="fa-solid fa-eye card-icon"></i>
-                                </div>
+                                <div class="card-header"><span class="card-title">Visibility</span><i class="fa-solid fa-eye card-icon"></i></div>
                                 <div class="card-body">
-                                    <div class="metric-main">
-                                        <h4><span id="visibility-value">--</span> <small>km</small></h4>
-                                    </div>
-                                    <p class="card-footnote" id="visibility-status">Clear view conditions.</p>
+                                    <div class="metric-main"><h4><span id="visibility-value">--</span> <small>km</small></h4></div>
+                                    <p class="card-footnote" id="visibility-status">--</p>
                                 </div>
                             </article>
-
                         </div>
                     </section>
                 </div>
-
-                <!-- ======================================================= -->
-                <!-- RIGHT CONTENT COLUMN (Extended Forecast & Analytics)   -->
-                <!-- ======================================================= -->
                 <div class="right-column">
-                    
-                    <!-- 7-DAY EXTENDED FORECAST PANEL -->
                     <section class="forecast-panel">
-                        <div class="panel-header">
-                            <h3><i class="fa-regular fa-calendar-days"></i> 7-Day Forecast</h3>
-                        </div>
-                        
-                        <div id="forecast-container" class="forecast-list">
-                            <!-- JS will inject 7 daily rows here -->
-                        </div>
+                        <div class="panel-header"><h3><i class="fa-regular fa-calendar-days"></i> 7-Day Forecast</h3></div>
+                        <div id="forecast-container" class="forecast-list"></div>
                     </section>
-
-                    <!-- QUICK TIPS / ADVISORY CARD -->
                     <section class="advisory-card">
-                        <div class="advisory-header">
-                            <i class="fa-solid fa-circle-info"></i>
-                            <h4>Daily Advisory</h4>
-                        </div>
+                        <div class="advisory-header"><i class="fa-solid fa-circle-info"></i><h4>Daily Advisory</h4></div>
                         <p id="advisory-text">Loading recommendations...</p>
                     </section>
-
                 </div>
             </div>
 
-            <!-- =================================================================== -->
-            <!-- WEATHER MAP SECTION (Hidden by Default)                             -->
-            <!-- =================================================================== -->
+            <!-- VIEW 2: WEATHER MAP -->
             <section id="weather-map-section" class="map-section hidden">
                 <div class="panel-header" style="margin-bottom: 1rem;">
                     <h3 style="font-size: 1.2rem;"><i class="fa-solid fa-map-location-dot"></i> Interactive Weather Map</h3>
@@ -330,26 +188,68 @@
                 <div id="map" class="map-container"></div>
             </section>
 
+            <!-- VIEW 3: AIR QUALITY ANALYTICS -->
+            <section id="aqi-analytics-section" class="aqi-section hidden">
+                <div class="panel-header" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.2rem;"><i class="fa-solid fa-wind"></i> Air Quality Analytics</h3>
+                    <p style="color: #64748b; font-size: 0.9rem; margin-top: 4px;">Real-time pollutant breakdown and health implications</p>
+                </div>
+                
+                <div class="aqi-hero-card" id="aqi-hero-bg">
+                    <div class="aqi-main-score">
+                        <h2 id="detailed-aqi-value">--</h2>
+                        <span style="font-size: 0.8rem; letter-spacing: 1px; opacity: 0.8;">US AQI</span>
+                    </div>
+                    <div class="aqi-status-details">
+                        <h3 id="detailed-aqi-status">Loading...</h3>
+                        <p id="detailed-aqi-advice">--</p>
+                    </div>
+                </div>
+
+                <div class="pollutants-grid">
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>PM2.5</span><i class="fa-solid fa-smog"></i></div>
+                        <h4 id="pm25-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="pm25-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>PM10</span><i class="fa-solid fa-smog"></i></div>
+                        <h4 id="pm10-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="pm10-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>NO₂ (Nitrogen Dioxide)</span><i class="fa-solid fa-car-side"></i></div>
+                        <h4 id="no2-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="no2-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>O₃ (Ozone)</span><i class="fa-solid fa-sun"></i></div>
+                        <h4 id="o3-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="o3-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>SO₂ (Sulphur Dioxide)</span><i class="fa-solid fa-industry"></i></div>
+                        <h4 id="so2-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="so2-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                    <div class="pollutant-card">
+                        <div class="pollutant-header"><span>CO (Carbon Monoxide)</span><i class="fa-solid fa-fire"></i></div>
+                        <h4 id="co-val">-- <small>µg/m³</small></h4>
+                        <div class="progress-bar-bg"><div id="co-bar" class="progress-bar-fill"></div></div>
+                    </div>
+                </div>
+            </section>
+
         </main>
 
-        <!-- =================================================================== -->
-        <!-- 3. INITIAL LOADING STATE & EMPTY STATE                              -->
-        <!-- =================================================================== -->
         <div id="loading-state" class="center-state-container" style="display: none;">
             <div class="spinner-loader"></div>
             <h3>Fetching Weather Analytics...</h3>
-            <p>Please search for a city or allow location access.</p>
         </div>
-
     </div>
 
-    <!-- TOAST NOTIFICATION CONTAINER -->
     <div id="toast-container" class="toast-container"></div>
-
-    <!-- Leaflet JS for Interactive Map -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    
-    <!-- Application Script Link -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="script.js"></script>
 </body>
 </html>
