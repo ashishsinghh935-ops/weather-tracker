@@ -359,7 +359,7 @@ body {
     gap: 6px;
 }
 
-/* Hourly Forecast */
+/* Hourly Forecast & Chart */
 .hourly-forecast-section {
     background: white;
     border: 1px solid #e2e8f0;
@@ -414,6 +414,16 @@ body {
 .hourly-temp {
     font-weight: 700;
     font-size: 1rem;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    height: 220px;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f1f5f9;
 }
 
 /* Highlights Grid */

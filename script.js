@@ -1,6 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
- * Clean Slate Edition
+ * Clean Slate Edition (Now with Chart.js)
  */
 
 const state = {
@@ -9,19 +9,18 @@ const state = {
     isFetching: false
 };
 
+// Global Integrations
 let weatherMap = null;
 let mapMarker = null;
+let trendChart = null; // New Chart.js Instance
 
 const DOM = {
-    // Search & Sidebar
     searchInput: document.getElementById('city-input'),
     suggestionsList: document.getElementById('suggestions-list'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
     savedCitiesList: document.getElementById('saved-cities-list'),
     addFavoriteBtn: document.getElementById('add-favorite-btn'),
     bookmarkBtn: document.getElementById('bookmark-btn'),
-    
-    // Views
     loadingState: document.getElementById('loading-state'),
     mainDashboard: document.getElementById('weather-display'),
     dashboardView: document.getElementById('dashboard-view'),
@@ -29,19 +28,13 @@ const DOM = {
     aqiSection: document.getElementById('aqi-analytics-section'),
     refreshBtn: document.getElementById('refresh-data-btn'),
     toastContainer: document.getElementById('toast-container'),
-    
-    // Header
     cityName: document.getElementById('city-name'),
     currentDate: document.getElementById('current-date'),
     lastUpdated: document.getElementById('last-updated-time'),
-    
-    // Detailed AQI Elements
     aqiHeroBg: document.getElementById('aqi-hero-bg'),
     detAqiVal: document.getElementById('detailed-aqi-value'),
     detAqiStat: document.getElementById('detailed-aqi-status'),
     detAqiAdv: document.getElementById('detailed-aqi-advice'),
-    
-    // Dashboard Summary Elements
     temp: document.getElementById('temperature'),
     condition: document.getElementById('condition'),
     feelsLike: document.getElementById('feels-like-temp'),
@@ -53,8 +46,6 @@ const DOM = {
     hourlyContainer: document.getElementById('hourly-container'),
     forecastContainer: document.getElementById('forecast-container'),
     advisoryText: document.getElementById('advisory-text'),
-    
-    // Highlights
     aqiValue: document.getElementById('aqi-value'),
     aqiBadge: document.getElementById('aqi-status-badge'),
     aqiRec: document.getElementById('aqi-recommendation'),
@@ -79,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupEventListeners() {
     let searchTimeout;
-
     DOM.searchInput.addEventListener('input', (e) => {
         const query = e.target.value.trim();
         if (query.length > 0) {
@@ -113,7 +103,6 @@ function setupEventListeners() {
     DOM.bookmarkBtn.addEventListener('click', saveLocHandler);
     DOM.addFavoriteBtn.addEventListener('click', saveLocHandler);
     
-    // View Navigation Logic
     const navLinks = document.querySelectorAll('.nav-link');
     navLinks.forEach(link => {
         link.addEventListener('click', (e) => {
@@ -123,7 +112,6 @@ function setupEventListeners() {
             
             const linkText = e.currentTarget.querySelector('span').textContent;
             
-            // Hide all views first
             DOM.dashboardView.classList.add('hidden');
             DOM.mapSection.classList.add('hidden');
             DOM.aqiSection.classList.add('hidden');
@@ -308,19 +296,100 @@ function updateHourlyForecast(hourly) {
     DOM.hourlyContainer.innerHTML = '';
     const currentHourIdx = new Date().getHours();
     
-    // The magic happens here! Changed i++ to i += 2 to jump every 2 hours
+    // Arrays for Chart.js
+    const chartLabels = [];
+    const chartData = [];
+    
     for (let i = currentHourIdx; i < currentHourIdx + 24; i += 2) {
         const timeStr = new Date(hourly.time[i]).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+        const label = i === currentHourIdx ? 'Now' : timeStr;
         const temp = Math.round(hourly.temperature_2m[i]);
         const weatherInfo = getWeatherDetails(hourly.weather_code[i], true); 
+        
+        // Populate UI track
         DOM.hourlyContainer.innerHTML += `
             <div class="hourly-card">
-                <p class="hourly-time">${i === currentHourIdx ? 'Now' : timeStr}</p>
+                <p class="hourly-time">${label}</p>
                 <i class="${weatherInfo.iconClass} hourly-icon" style="margin: 8px 0; font-size: 1.2rem;"></i>
                 <p class="hourly-temp">${temp}°</p>
             </div>
         `;
+        
+        // Store data for the chart
+        chartLabels.push(label);
+        chartData.push(temp);
     }
+    
+    renderChart(chartLabels, chartData);
+}
+
+// NEW: Chart.js Rendering Logic
+function renderChart(labels, data) {
+    const canvas = document.getElementById('forecastChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Update existing chart to prevent flickering/overlap
+    if (trendChart) {
+        trendChart.data.labels = labels;
+        trendChart.data.datasets[0].data = data;
+        trendChart.update();
+        return;
+    }
+
+    // Create a beautiful gradient fill beneath the line
+    let gradient = ctx.createLinearGradient(0, 0, 0, 250);
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)'); // brand color with opacity
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+
+    trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Temperature (°C)',
+                data: data,
+                borderColor: '#4f46e5',
+                backgroundColor: gradient,
+                borderWidth: 2,
+                pointBackgroundColor: '#ffffff',
+                pointBorderColor: '#4f46e5',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                fill: true,
+                tension: 0.4 // Makes the line smoothly curved
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#1e293b',
+                    padding: 12,
+                    cornerRadius: 8,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) { return context.parsed.y + '°C'; }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b', font: { size: 11 } }
+                },
+                y: {
+                    grid: { borderDash: [4, 4], color: '#e2e8f0' },
+                    ticks: { 
+                        color: '#64748b',
+                        callback: function(value) { return value + '°'; }
+                    }
+                }
+            }
+        }
+    });
 }
 
 function updateDailyForecast(daily) {
