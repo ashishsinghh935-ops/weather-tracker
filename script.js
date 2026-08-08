@@ -307,7 +307,9 @@ function updateDetailedAQI(aqiData) {
 function updateHourlyForecast(hourly) {
     DOM.hourlyContainer.innerHTML = '';
     const currentHourIdx = new Date().getHours();
-    for (let i = currentHourIdx; i < currentHourIdx + 24; i++) {
+    
+    // The magic happens here! Changed i++ to i += 2 to jump every 2 hours
+    for (let i = currentHourIdx; i < currentHourIdx + 24; i += 2) {
         const timeStr = new Date(hourly.time[i]).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
         const temp = Math.round(hourly.temperature_2m[i]);
         const weatherInfo = getWeatherDetails(hourly.weather_code[i], true); 
