@@ -1,5 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
+ * Clean Slate Edition
  */
 
 const state = {
@@ -12,6 +13,7 @@ let weatherMap = null;
 let mapMarker = null;
 
 const DOM = {
+    // Search & Sidebar
     searchInput: document.getElementById('city-input'),
     suggestionsList: document.getElementById('suggestions-list'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
@@ -28,11 +30,12 @@ const DOM = {
     refreshBtn: document.getElementById('refresh-data-btn'),
     toastContainer: document.getElementById('toast-container'),
     
+    // Header
     cityName: document.getElementById('city-name'),
     currentDate: document.getElementById('current-date'),
     lastUpdated: document.getElementById('last-updated-time'),
     
-    // AQI Analytics Elements
+    // Detailed AQI Elements
     aqiHeroBg: document.getElementById('aqi-hero-bg'),
     detAqiVal: document.getElementById('detailed-aqi-value'),
     detAqiStat: document.getElementById('detailed-aqi-status'),
@@ -175,8 +178,6 @@ async function fetchDashboardData(lat, lon, cityName) {
 
     try {
         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,weather_code,visibility,dew_point_2m&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
-        
-        // UPGRADED API CALL: Fetching all detailed pollutants
         const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone`;
 
         const [weatherRes, aqiRes] = await Promise.all([ fetch(weatherUrl), fetch(aqiUrl) ]);
@@ -199,13 +200,12 @@ async function fetchDashboardData(lat, lon, cityName) {
         DOM.mainDashboard.classList.remove('hidden');
 
     } catch (error) {
-        showToast("Failed to load data.", "error");
+        showToast("Failed to load data. Please check connection.", "error");
     } finally {
         state.isFetching = false;
     }
 }
 
-// Data Population Functions
 function renderSuggestions(results) {
     DOM.suggestionsList.innerHTML = '';
     results.forEach(city => {
@@ -271,42 +271,37 @@ function updateHighlights(current, hourly, daily, aqiCurrent) {
     DOM.visibilityStatus.textContent = (hourly.visibility[currentHour] / 1000) > 8 ? "Perfectly clear view." : "Visibility is reduced.";
 }
 
-// === NEW: Detailed Air Quality Analytics Logic ===
 function updateDetailedAQI(aqiData) {
     const aqi = aqiData.us_aqi || 0;
     const aqiInfo = getAQIStatus(aqi);
     
-    // Update AQI Hero
     DOM.detAqiVal.textContent = aqi;
     DOM.detAqiStat.textContent = aqiInfo.label;
     DOM.detAqiAdv.textContent = aqiInfo.advice;
     
-    // Dynamic Hero Background based on severity
     if(aqi <= 50) DOM.aqiHeroBg.style.background = 'linear-gradient(135deg, #065f46 0%, #047857 100%)';
     else if(aqi <= 100) DOM.aqiHeroBg.style.background = 'linear-gradient(135deg, #b45309 0%, #d97706 100%)';
     else if(aqi <= 150) DOM.aqiHeroBg.style.background = 'linear-gradient(135deg, #c2410c 0%, #ea580c 100%)';
     else DOM.aqiHeroBg.style.background = 'linear-gradient(135deg, #991b1b 0%, #b91c1c 100%)';
 
-    // Helper to calculate bar width and color
     const updatePollutant = (id, val, maxStandard) => {
         document.getElementById(`${id}-val`).innerHTML = `${val} <small>µg/m³</small>`;
         const bar = document.getElementById(`${id}-bar`);
         let percent = Math.min((val / maxStandard) * 100, 100);
         bar.style.width = `${percent}%`;
         
-        if (percent < 30) bar.style.backgroundColor = '#10b981'; // Green
-        else if (percent < 60) bar.style.backgroundColor = '#f59e0b'; // Yellow
-        else if (percent < 85) bar.style.backgroundColor = '#f97316'; // Orange
-        else bar.style.backgroundColor = '#ef4444'; // Red
+        if (percent < 30) bar.style.backgroundColor = '#10b981';
+        else if (percent < 60) bar.style.backgroundColor = '#f59e0b';
+        else if (percent < 85) bar.style.backgroundColor = '#f97316';
+        else bar.style.backgroundColor = '#ef4444';
     };
 
-    // Update Pollutant Bars (using rough WHO/EPA standard limits as 100% max reference)
     updatePollutant('pm25', Math.round(aqiData.pm2_5), 50);
     updatePollutant('pm10', Math.round(aqiData.pm10), 100);
     updatePollutant('no2', Math.round(aqiData.nitrogen_dioxide), 100);
     updatePollutant('o3', Math.round(aqiData.ozone), 150);
     updatePollutant('so2', Math.round(aqiData.sulphur_dioxide), 100);
-    updatePollutant('co', Math.round(aqiData.carbon_monoxide), 5000); // CO values are higher
+    updatePollutant('co', Math.round(aqiData.carbon_monoxide), 5000);
 }
 
 function updateHourlyForecast(hourly) {
@@ -373,7 +368,7 @@ function renderSavedCities() {
         li.className = 'saved-city-item';
         li.style.cursor = 'pointer';
         li.style.padding = '8px 0';
-        li.innerHTML = `<span class="saved-city-name"><i class="fa-solid fa-map-pin" style="margin-right: 6px; color: var(--accent-primary);"></i> ${city.name.split(',')[0]}</span>`;
+        li.innerHTML = `<span class="saved-city-name"><i class="fa-solid fa-map-pin" style="margin-right: 6px; color: #4f46e5;"></i> ${city.name.split(',')[0]}</span>`;
         li.addEventListener('click', () => fetchDashboardData(city.lat, city.lon, city.name));
         DOM.savedCitiesList.appendChild(li);
     });
@@ -381,7 +376,7 @@ function renderSavedCities() {
 
 function updateBookmarkStatus() {
     DOM.bookmarkBtn.innerHTML = state.savedCities.some(c => c.name === state.currentLocation.name) 
-        ? '<i class="fa-solid fa-bookmark" style="color: var(--accent-primary)"></i>' 
+        ? '<i class="fa-solid fa-bookmark" style="color: #4f46e5"></i>' 
         : '<i class="fa-regular fa-bookmark"></i>';
 }
 

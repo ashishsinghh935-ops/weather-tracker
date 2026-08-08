@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WeatherPro | Professional Weather Analytics</title>
     
-    <!-- Cache-busting version added here -->
-    <link rel="stylesheet" href="main.css">
+    <!-- Clean, explicit relative path for the CSS -->
+    <link rel="stylesheet" href="./style.css">
+    
+    <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 </head>
@@ -14,7 +16,9 @@
     
     <div class="app-container">
         
-        <!-- SIDEBAR -->
+        <!-- ========================================== -->
+        <!-- SIDEBAR NAVIGATION                         -->
+        <!-- ========================================== -->
         <aside class="sidebar">
             <div class="brand-header">
                 <div class="brand-logo"><i class="fa-solid fa-cloud-bolt"></i></div>
@@ -30,6 +34,7 @@
                     <input type="text" id="city-input" placeholder="Search city, state..." autocomplete="off">
                     <button id="clear-search-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+                <!-- Dropdown for search suggestions -->
                 <ul id="suggestions-list" class="suggestions-dropdown hidden"></ul>
             </div>
 
@@ -68,7 +73,9 @@
             </div>
         </aside>
 
-        <!-- MAIN CONTENT AREA -->
+        <!-- ========================================== -->
+        <!-- MAIN CONTENT AREA                          -->
+        <!-- ========================================== -->
         <main class="main-dashboard hidden" id="weather-display">
             
             <header class="dashboard-header">
@@ -90,9 +97,12 @@
                 </div>
             </header>
 
-            <!-- VIEW 1: DASHBOARD GRID -->
+            <!-- --------------------------------------- -->
+            <!-- VIEW 1: DASHBOARD GRID                  -->
+            <!-- --------------------------------------- -->
             <div id="dashboard-view" class="dashboard-grid">
                 <div class="left-column">
+                    <!-- Hero Section -->
                     <section class="hero-weather-card">
                         <div class="hero-top-info">
                             <div class="temp-display">
@@ -112,6 +122,7 @@
                         </div>
                     </section>
 
+                    <!-- 24-Hour Forecast -->
                     <section class="hourly-forecast-section">
                         <div class="section-title-wrapper">
                             <h3><i class="fa-regular fa-clock"></i> 24-Hour Forecast</h3>
@@ -119,6 +130,7 @@
                         <div id="hourly-container" class="hourly-scroll-track"></div>
                     </section>
 
+                    <!-- Highlights Grid -->
                     <section class="highlights-section">
                         <div class="section-title-wrapper">
                             <h3><i class="fa-solid fa-sliders"></i> Today's Highlights</h3>
@@ -170,10 +182,12 @@
                     </section>
                 </div>
                 <div class="right-column">
+                    <!-- 7-Day Forecast -->
                     <section class="forecast-panel">
                         <div class="panel-header"><h3><i class="fa-regular fa-calendar-days"></i> 7-Day Forecast</h3></div>
                         <div id="forecast-container" class="forecast-list"></div>
                     </section>
+                    <!-- Advisory -->
                     <section class="advisory-card">
                         <div class="advisory-header"><i class="fa-solid fa-circle-info"></i><h4>Daily Advisory</h4></div>
                         <p id="advisory-text">Loading recommendations...</p>
@@ -181,7 +195,9 @@
                 </div>
             </div>
 
-            <!-- VIEW 2: WEATHER MAP -->
+            <!-- --------------------------------------- -->
+            <!-- VIEW 2: WEATHER MAP                     -->
+            <!-- --------------------------------------- -->
             <section id="weather-map-section" class="map-section hidden">
                 <div class="panel-header" style="margin-bottom: 1rem;">
                     <h3 style="font-size: 1.2rem;"><i class="fa-solid fa-map-location-dot"></i> Interactive Weather Map</h3>
@@ -189,7 +205,9 @@
                 <div id="map" class="map-container"></div>
             </section>
 
-            <!-- VIEW 3: AIR QUALITY ANALYTICS -->
+            <!-- --------------------------------------- -->
+            <!-- VIEW 3: AIR QUALITY ANALYTICS           -->
+            <!-- --------------------------------------- -->
             <section id="aqi-analytics-section" class="aqi-section hidden">
                 <div class="panel-header" style="margin-bottom: 1.5rem;">
                     <h3 style="font-size: 1.2rem;"><i class="fa-solid fa-wind"></i> Air Quality Analytics</h3>
@@ -243,14 +261,18 @@
 
         </main>
 
+        <!-- Loading State -->
         <div id="loading-state" class="center-state-container" style="display: none;">
             <div class="spinner-loader"></div>
             <h3>Fetching Weather Analytics...</h3>
         </div>
     </div>
 
+    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
+    
+    <!-- Scripts -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-    <script src="script.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>
