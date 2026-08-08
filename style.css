@@ -142,6 +142,28 @@ body {
     background-color: #f1f5f9;
 }
 
+/* Locate Button */
+.locate-btn {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.locate-btn:hover {
+    background: #3730a3;
+}
+
+.locate-btn:active {
+    transform: scale(0.95);
+}
+
 /* Navigation Links */
 .nav-title {
     font-size: 0.75rem;
@@ -301,9 +323,8 @@ body {
 }
 
 /* ==========================================================================
-   DASHBOARD CARDS & WIDGETS
+   HERO WEATHER CARD (WITH 3D CANVAS)
    ========================================================================== */
-/* Hero Weather Card */
 .hero-weather-card {
     background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
     color: white;
@@ -313,6 +334,24 @@ body {
     flex-direction: column;
     gap: 2rem;
     box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+    position: relative; /* CRITICAL FOR 3D CANVAS */
+    overflow: hidden;
+}
+
+#three-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none; /* Allows user to click through the animation */
+}
+
+/* Layer the text over the 3D background */
+.hero-top-info, .hero-bottom-info {
+    position: relative;
+    z-index: 2;
 }
 
 .hero-top-info {
@@ -359,7 +398,9 @@ body {
     gap: 6px;
 }
 
-/* Hourly Forecast & Chart */
+/* ==========================================================================
+   DASHBOARD WIDGETS
+   ========================================================================== */
 .hourly-forecast-section {
     background: white;
     border: 1px solid #e2e8f0;
@@ -383,10 +424,12 @@ body {
 .hourly-scroll-track::-webkit-scrollbar {
     height: 6px;
 }
+
 .hourly-scroll-track::-webkit-scrollbar-track {
     background: #f1f5f9;
     border-radius: 10px;
 }
+
 .hourly-scroll-track::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 10px;
@@ -416,7 +459,6 @@ body {
     font-size: 1rem;
 }
 
-/* Chart Container */
 .chart-container {
     position: relative;
     height: 220px;
@@ -426,7 +468,6 @@ body {
     border-top: 1px solid #f1f5f9;
 }
 
-/* Highlights Grid */
 .highlights-section {
     display: flex;
     flex-direction: column;
@@ -490,7 +531,6 @@ body {
     margin-top: auto;
 }
 
-/* 7-Day Forecast Sidebar */
 .forecast-panel, .advisory-card {
     background: white;
     border: 1px solid #e2e8f0;
@@ -541,7 +581,6 @@ body {
     color: #94a3b8;
 }
 
-/* Advisory Card */
 .advisory-header {
     display: flex;
     align-items: center;
@@ -678,8 +717,8 @@ body {
 /* ==========================================================================
    UTILITIES & STATES
    ========================================================================== */
-.hidden { 
-    display: none !important; 
+.hidden {
+    display: none !important;
 }
 
 .center-state-container {
@@ -705,28 +744,4 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* ==========================================================================
-   LOCATE ME BUTTON STYLES
-   ========================================================================== */
-.locate-btn {
-    background: #4f46e5;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    width: 40px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s ease, transform 0.1s ease;
-}
-
-.locate-btn:hover {
-    background: #3730a3;
-}
-
-.locate-btn:active {
-    transform: scale(0.95);
 }

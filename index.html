@@ -11,6 +11,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- NEW: Three.js for 3D Weather Animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
     
@@ -26,7 +29,6 @@
                 </div>
             </div>
 
-            <!-- NEW: Search Area with Locate Button -->
             <div class="sidebar-search">
                 <div style="display: flex; gap: 8px;">
                     <div class="search-input-wrapper" style="flex: 1;">
@@ -101,7 +103,12 @@
             <!-- VIEW 1: DASHBOARD -->
             <div id="dashboard-view" class="dashboard-grid">
                 <div class="left-column">
+                    
+                    <!-- UPDATED HERO CARD -->
                     <section class="hero-weather-card">
+                        <!-- NEW: 3D Canvas Background -->
+                        <canvas id="three-canvas"></canvas>
+                        
                         <div class="hero-top-info">
                             <div class="temp-display">
                                 <h2 id="temperature">--°C</h2>

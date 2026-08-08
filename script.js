@@ -1,6 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
- * Clean Slate Edition (Chart.js + Geolocation)
+ * Clean Slate Edition (Chart.js + Geolocation + THREE.JS 3D Animations)
  */
 
 const state = {
@@ -14,11 +14,14 @@ let weatherMap = null;
 let mapMarker = null;
 let trendChart = null; 
 
+// Three.js Globals
+let threeScene, threeCamera, threeRenderer, weatherParticles, animationId;
+
 const DOM = {
     searchInput: document.getElementById('city-input'),
     suggestionsList: document.getElementById('suggestions-list'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
-    locateBtn: document.getElementById('locate-btn'), // NEW: Locate Button
+    locateBtn: document.getElementById('locate-btn'),
     savedCitiesList: document.getElementById('saved-cities-list'),
     addFavoriteBtn: document.getElementById('add-favorite-btn'),
     bookmarkBtn: document.getElementById('bookmark-btn'),
@@ -32,10 +35,6 @@ const DOM = {
     cityName: document.getElementById('city-name'),
     currentDate: document.getElementById('current-date'),
     lastUpdated: document.getElementById('last-updated-time'),
-    aqiHeroBg: document.getElementById('aqi-hero-bg'),
-    detAqiVal: document.getElementById('detailed-aqi-value'),
-    detAqiStat: document.getElementById('detailed-aqi-status'),
-    detAqiAdv: document.getElementById('detailed-aqi-advice'),
     temp: document.getElementById('temperature'),
     condition: document.getElementById('condition'),
     feelsLike: document.getElementById('feels-like-temp'),
@@ -47,9 +46,15 @@ const DOM = {
     hourlyContainer: document.getElementById('hourly-container'),
     forecastContainer: document.getElementById('forecast-container'),
     advisoryText: document.getElementById('advisory-text'),
+    
     aqiValue: document.getElementById('aqi-value'),
     aqiBadge: document.getElementById('aqi-status-badge'),
     aqiRec: document.getElementById('aqi-recommendation'),
+    aqiHeroBg: document.getElementById('aqi-hero-bg'),
+    detAqiVal: document.getElementById('detailed-aqi-value'),
+    detAqiStat: document.getElementById('detailed-aqi-status'),
+    detAqiAdv: document.getElementById('detailed-aqi-advice'),
+    
     windSpeed: document.getElementById('wind-speed'),
     windDir: document.getElementById('wind-direction'),
     humidity: document.getElementById('humidity-value'),
@@ -91,7 +96,6 @@ function setupEventListeners() {
         DOM.searchInput.focus();
     });
 
-    // NEW: Auto-Geolocation Logic
     DOM.locateBtn.addEventListener('click', () => {
         if (navigator.geolocation) {
             showToast("Requesting location access...", "info");
@@ -99,7 +103,6 @@ function setupEventListeners() {
                 const lat = position.coords.latitude;
                 const lon = position.coords.longitude;
                 try {
-                    // Reverse geocoding to turn coordinates into a city name
                     const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
                     const data = await res.json();
                     
@@ -117,7 +120,7 @@ function setupEventListeners() {
                 showToast("Location access denied or unavailable.", "error");
             });
         } else {
-            showToast("Geolocation is not supported by your browser.", "error");
+            showToast("Geolocation is not supported.", "error");
         }
     });
 
@@ -261,7 +264,105 @@ function updateHeroSection(current, daily) {
     DOM.tempMin.textContent = `${Math.round(daily.temperature_2m_min[0])}°C`;
     DOM.sunrise.textContent = formatTime(daily.sunrise[0]);
     DOM.sunset.textContent = formatTime(daily.sunset[0]);
+
+    // NEW: Fire up the Three.js weather particle system
+    initThreeJS(current.weather_code);
 }
+
+// ==========================================================================
+// 🚀 THREE.JS WEATHER ANIMATION ENGINE
+// ==========================================================================
+function initThreeJS(weatherCode) {
+    const canvas = document.getElementById('three-canvas');
+    if(!canvas || !window.THREE) return;
+    
+    // Stop any existing animation loop to prevent memory leaks
+    if(animationId) cancelAnimationFrame(animationId);
+    
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    
+    // Initialize Renderer
+    threeRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    threeRenderer.setSize(width, height);
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // optimize performance
+    
+    threeScene = new THREE.Scene();
+    threeCamera = new THREE.PerspectiveCamera(60, width/height, 0.1, 1000);
+    threeCamera.position.z = 50;
+
+    // Determine animation type based on WMO code
+    let type = 'clear';
+    if ([51,53,55,61,63,65,80,81,82,95,96,99].includes(weatherCode)) type = 'rain';
+    if ([71,73,75,77,85,86].includes(weatherCode)) type = 'snow';
+    if ([3,45,48].includes(weatherCode)) type = 'cloudy';
+
+    const particleCount = type === 'rain' ? 800 : (type === 'snow' ? 500 : 300);
+    const geometry = new THREE.BufferGeometry();
+    const posArray = new Float32Array(particleCount * 3);
+    
+    for(let i=0; i < particleCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 120; // Spread particles
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    
+    const material = new THREE.PointsMaterial({
+        size: type === 'snow' ? 0.8 : (type === 'rain' ? 0.4 : 0.6),
+        color: 0xffffff,
+        transparent: true,
+        opacity: type === 'clear' ? 0.15 : (type === 'cloudy' ? 0.3 : 0.6),
+        blending: THREE.AdditiveBlending
+    });
+
+    weatherParticles = new THREE.Points(geometry, material);
+    
+    // Stretch raindrops slightly
+    if(type === 'rain') {
+        weatherParticles.scale.y = 3;
+    }
+    
+    threeScene.add(weatherParticles);
+
+    // Animation Loop
+    function animate() {
+        animationId = requestAnimationFrame(animate);
+        
+        const positions = weatherParticles.geometry.attributes.position.array;
+        
+        for(let i=1; i < particleCount * 3; i+=3) {
+            if(type === 'rain') {
+                positions[i] -= 1.5; // fall fast
+                if(positions[i] < -50) positions[i] = 50;
+            } else if (type === 'snow') {
+                positions[i] -= 0.2; // fall slow
+                positions[i-1] += (Math.random() - 0.5) * 0.1; // drift sideways
+                if(positions[i] < -50) positions[i] = 50;
+            } else {
+                // Clear/Cloudy: Gentle floating dust effect
+                positions[i] += Math.sin(Date.now() * 0.001 + positions[i-1]) * 0.01;
+            }
+        }
+        weatherParticles.geometry.attributes.position.needsUpdate = true;
+        
+        // Gentle rotation for atmospheric feel
+        if(type === 'cloudy') weatherParticles.rotation.y += 0.001;
+        else if(type === 'clear') weatherParticles.rotation.x += 0.0005;
+        
+        threeRenderer.render(threeScene, threeCamera);
+    }
+    animate();
+    
+    // Auto-resize handler
+    window.addEventListener('resize', () => {
+        if(!canvas) return;
+        const w = canvas.parentElement.clientWidth;
+        const h = canvas.parentElement.clientHeight;
+        threeRenderer.setSize(w, h);
+        threeCamera.aspect = w / h;
+        threeCamera.updateProjectionMatrix();
+    });
+}
+// ==========================================================================
 
 function updateHighlights(current, hourly, daily, aqiCurrent) {
     const aqi = aqiCurrent.us_aqi;
