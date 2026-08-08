@@ -1,6 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
- * Clean Slate Edition (Chart.js + Geolocation + THREE.JS 3D Animations)
+ * Clean Slate Edition (Chart.js + Geolocation + THREE.JS Fixed Lifecycle)
  */
 
 const state = {
@@ -152,6 +152,8 @@ function setupEventListeners() {
             
             if (linkText === 'Dashboard') {
                 DOM.dashboardView.classList.remove('hidden');
+                // Ensure Chart resize on view change
+                if(trendChart) trendChart.resize(); 
             } else if (linkText === 'Weather Map') {
                 DOM.mapSection.classList.remove('hidden');
                 initMap(state.currentLocation.lat, state.currentLocation.lon, state.currentLocation.name);
@@ -218,8 +220,16 @@ async function fetchDashboardData(lat, lon, cityName) {
         
         if (weatherMap) initMap(lat, lon, cityName);
 
+        // UI Reveal
         DOM.loadingState.style.display = 'none';
         DOM.mainDashboard.classList.remove('hidden');
+
+        // FIXED LIFECYCLE: 
+        // Boot up Three.js *after* the dashboard layout is fully visible and dimensions are established.
+        // A 50ms timeout ensures the browser paints the DOM before grabbing width/height.
+        setTimeout(() => {
+            initThreeJS(weatherData.current.weather_code);
+        }, 50);
 
     } catch (error) {
         showToast("Failed to load data. Please check connection.", "error");
@@ -264,9 +274,8 @@ function updateHeroSection(current, daily) {
     DOM.tempMin.textContent = `${Math.round(daily.temperature_2m_min[0])}°C`;
     DOM.sunrise.textContent = formatTime(daily.sunrise[0]);
     DOM.sunset.textContent = formatTime(daily.sunset[0]);
-
-    // NEW: Fire up the Three.js weather particle system
-    initThreeJS(current.weather_code);
+    
+    // Removed initThreeJS from here to prevent the 0x0 canvas bug
 }
 
 // ==========================================================================
@@ -276,54 +285,53 @@ function initThreeJS(weatherCode) {
     const canvas = document.getElementById('three-canvas');
     if(!canvas || !window.THREE) return;
     
-    // Stop any existing animation loop to prevent memory leaks
     if(animationId) cancelAnimationFrame(animationId);
     
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
     
-    // Initialize Renderer
+    // Safety check in case it's still hidden
+    if (width === 0 || height === 0) return;
+
     threeRenderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     threeRenderer.setSize(width, height);
-    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // optimize performance
+    threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); 
     
     threeScene = new THREE.Scene();
     threeCamera = new THREE.PerspectiveCamera(60, width/height, 0.1, 1000);
     threeCamera.position.z = 50;
 
-    // Determine animation type based on WMO code
     let type = 'clear';
     if ([51,53,55,61,63,65,80,81,82,95,96,99].includes(weatherCode)) type = 'rain';
     if ([71,73,75,77,85,86].includes(weatherCode)) type = 'snow';
     if ([3,45,48].includes(weatherCode)) type = 'cloudy';
 
-    const particleCount = type === 'rain' ? 800 : (type === 'snow' ? 500 : 300);
+    // Increased particle count and opacity slightly so it's more visible!
+    const particleCount = type === 'rain' ? 800 : (type === 'snow' ? 500 : 450);
     const geometry = new THREE.BufferGeometry();
     const posArray = new Float32Array(particleCount * 3);
     
     for(let i=0; i < particleCount * 3; i++) {
-        posArray[i] = (Math.random() - 0.5) * 120; // Spread particles
+        posArray[i] = (Math.random() - 0.5) * 120; 
     }
     geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
     
     const material = new THREE.PointsMaterial({
-        size: type === 'snow' ? 0.8 : (type === 'rain' ? 0.4 : 0.6),
+        size: type === 'snow' ? 0.8 : (type === 'rain' ? 0.4 : 0.8),
         color: 0xffffff,
         transparent: true,
-        opacity: type === 'clear' ? 0.15 : (type === 'cloudy' ? 0.3 : 0.6),
+        opacity: type === 'clear' ? 0.2 : (type === 'cloudy' ? 0.4 : 0.6),
         blending: THREE.AdditiveBlending
     });
 
     weatherParticles = new THREE.Points(geometry, material);
     
-    // Stretch raindrops slightly
     if(type === 'rain') {
         weatherParticles.scale.y = 3;
     }
     
     threeScene.add(weatherParticles);
 
-    // Animation Loop
     function animate() {
         animationId = requestAnimationFrame(animate);
         
@@ -331,20 +339,18 @@ function initThreeJS(weatherCode) {
         
         for(let i=1; i < particleCount * 3; i+=3) {
             if(type === 'rain') {
-                positions[i] -= 1.5; // fall fast
+                positions[i] -= 1.5; 
                 if(positions[i] < -50) positions[i] = 50;
             } else if (type === 'snow') {
-                positions[i] -= 0.2; // fall slow
-                positions[i-1] += (Math.random() - 0.5) * 0.1; // drift sideways
+                positions[i] -= 0.2; 
+                positions[i-1] += (Math.random() - 0.5) * 0.1; 
                 if(positions[i] < -50) positions[i] = 50;
             } else {
-                // Clear/Cloudy: Gentle floating dust effect
                 positions[i] += Math.sin(Date.now() * 0.001 + positions[i-1]) * 0.01;
             }
         }
         weatherParticles.geometry.attributes.position.needsUpdate = true;
         
-        // Gentle rotation for atmospheric feel
         if(type === 'cloudy') weatherParticles.rotation.y += 0.001;
         else if(type === 'clear') weatherParticles.rotation.x += 0.0005;
         
@@ -352,11 +358,11 @@ function initThreeJS(weatherCode) {
     }
     animate();
     
-    // Auto-resize handler
     window.addEventListener('resize', () => {
         if(!canvas) return;
         const w = canvas.parentElement.clientWidth;
         const h = canvas.parentElement.clientHeight;
+        if(w === 0 || h === 0) return;
         threeRenderer.setSize(w, h);
         threeCamera.aspect = w / h;
         threeCamera.updateProjectionMatrix();
