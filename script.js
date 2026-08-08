@@ -1,6 +1,6 @@
 /**
  * WeatherPro - Professional Weather Dashboard Logic
- * Clean Slate Edition (Now with Chart.js)
+ * Clean Slate Edition (Chart.js + Geolocation)
  */
 
 const state = {
@@ -12,12 +12,13 @@ const state = {
 // Global Integrations
 let weatherMap = null;
 let mapMarker = null;
-let trendChart = null; // New Chart.js Instance
+let trendChart = null; 
 
 const DOM = {
     searchInput: document.getElementById('city-input'),
     suggestionsList: document.getElementById('suggestions-list'),
     clearSearchBtn: document.getElementById('clear-search-btn'),
+    locateBtn: document.getElementById('locate-btn'), // NEW: Locate Button
     savedCitiesList: document.getElementById('saved-cities-list'),
     addFavoriteBtn: document.getElementById('add-favorite-btn'),
     bookmarkBtn: document.getElementById('bookmark-btn'),
@@ -88,6 +89,36 @@ function setupEventListeners() {
         DOM.clearSearchBtn.classList.add('hidden');
         DOM.suggestionsList.classList.add('hidden');
         DOM.searchInput.focus();
+    });
+
+    // NEW: Auto-Geolocation Logic
+    DOM.locateBtn.addEventListener('click', () => {
+        if (navigator.geolocation) {
+            showToast("Requesting location access...", "info");
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                try {
+                    // Reverse geocoding to turn coordinates into a city name
+                    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+                    const data = await res.json();
+                    
+                    const cityName = data.city || data.locality || "Current Location";
+                    const fullName = data.countryName ? `${cityName}, ${data.countryName}` : cityName;
+                    
+                    DOM.searchInput.value = '';
+                    DOM.suggestionsList.classList.add('hidden');
+                    fetchDashboardData(lat, lon, fullName);
+                    showToast("Location found!", "success");
+                } catch (error) {
+                    fetchDashboardData(lat, lon, "Current Location");
+                }
+            }, (error) => {
+                showToast("Location access denied or unavailable.", "error");
+            });
+        } else {
+            showToast("Geolocation is not supported by your browser.", "error");
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -296,7 +327,6 @@ function updateHourlyForecast(hourly) {
     DOM.hourlyContainer.innerHTML = '';
     const currentHourIdx = new Date().getHours();
     
-    // Arrays for Chart.js
     const chartLabels = [];
     const chartData = [];
     
@@ -306,7 +336,6 @@ function updateHourlyForecast(hourly) {
         const temp = Math.round(hourly.temperature_2m[i]);
         const weatherInfo = getWeatherDetails(hourly.weather_code[i], true); 
         
-        // Populate UI track
         DOM.hourlyContainer.innerHTML += `
             <div class="hourly-card">
                 <p class="hourly-time">${label}</p>
@@ -315,7 +344,6 @@ function updateHourlyForecast(hourly) {
             </div>
         `;
         
-        // Store data for the chart
         chartLabels.push(label);
         chartData.push(temp);
     }
@@ -323,13 +351,11 @@ function updateHourlyForecast(hourly) {
     renderChart(chartLabels, chartData);
 }
 
-// NEW: Chart.js Rendering Logic
 function renderChart(labels, data) {
     const canvas = document.getElementById('forecastChart');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     
-    // Update existing chart to prevent flickering/overlap
     if (trendChart) {
         trendChart.data.labels = labels;
         trendChart.data.datasets[0].data = data;
@@ -337,9 +363,8 @@ function renderChart(labels, data) {
         return;
     }
 
-    // Create a beautiful gradient fill beneath the line
     let gradient = ctx.createLinearGradient(0, 0, 0, 250);
-    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)'); // brand color with opacity
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.4)');
     gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
 
     trendChart = new Chart(ctx, {
@@ -357,7 +382,7 @@ function renderChart(labels, data) {
                 pointBorderWidth: 2,
                 pointRadius: 4,
                 fill: true,
-                tension: 0.4 // Makes the line smoothly curved
+                tension: 0.4
             }]
         },
         options: {

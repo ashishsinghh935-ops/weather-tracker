@@ -706,3 +706,27 @@ body {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* ==========================================================================
+   LOCATE ME BUTTON STYLES
+   ========================================================================== */
+.locate-btn {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.locate-btn:hover {
+    background: #3730a3;
+}
+
+.locate-btn:active {
+    transform: scale(0.95);
+}

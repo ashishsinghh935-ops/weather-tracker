@@ -10,7 +10,6 @@
     <!-- External Libraries -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -27,11 +26,17 @@
                 </div>
             </div>
 
+            <!-- NEW: Search Area with Locate Button -->
             <div class="sidebar-search">
-                <div class="search-input-wrapper">
-                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="city-input" placeholder="Search city, state..." autocomplete="off">
-                    <button id="clear-search-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
+                <div style="display: flex; gap: 8px;">
+                    <div class="search-input-wrapper" style="flex: 1;">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input type="text" id="city-input" placeholder="Search city..." autocomplete="off">
+                        <button id="clear-search-btn" class="clear-btn hidden"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <button id="locate-btn" class="locate-btn" title="Use My Current Location">
+                        <i class="fa-solid fa-location-crosshairs"></i>
+                    </button>
                 </div>
                 <ul id="suggestions-list" class="suggestions-dropdown hidden"></ul>
             </div>
@@ -119,10 +124,7 @@
                         <div class="section-title-wrapper">
                             <h3><i class="fa-regular fa-clock"></i> 24-Hour Forecast & Trend</h3>
                         </div>
-                        <!-- Hourly Scroll Track -->
                         <div id="hourly-container" class="hourly-scroll-track"></div>
-                        
-                        <!-- NEW: Interactive Chart Container -->
                         <div class="chart-container">
                             <canvas id="forecastChart"></canvas>
                         </div>
