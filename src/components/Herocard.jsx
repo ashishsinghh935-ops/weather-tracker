@@ -1,7 +1,37 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
-// Notice we added { data, isLoading } inside the parentheses
+// Helper function to map Open-Meteo WMO weather codes to text and icons
+const getWeatherDetails = (code) => {
+  switch (code) {
+    case 0:
+      return { text: 'Clear Sky', icon: 'fa-sun text-yellow-300' };
+    case 1:
+    case 2:
+    case 3:
+      return { text: 'Partly Cloudy', icon: 'fa-cloud-sun text-slate-200' };
+    case 45:
+    case 48:
+      return { text: 'Foggy', icon: 'fa-smog text-slate-300' };
+    case 51:
+    case 53:
+    case 55:
+    case 61:
+    case 63:
+      return { text: 'Rain Showers', icon: 'fa-cloud-rain text-blue-200' };
+    case 71:
+    case 73:
+    case 75:
+      return { text: 'Snowfall', icon: 'fa-snowflake text-cyan-200' };
+    case 95:
+    case 96:
+    case 99:
+      return { text: 'Thunderstorm', icon: 'fa-cloud-bolt text-amber-300' };
+    default:
+      return { text: 'Fair Weather', icon: 'fa-cloud-sun text-yellow-300' };
+  }
+};
+
 const HeroCard = ({ data, isLoading }) => {
   const mountRef = useRef(null);
 
@@ -47,12 +77,14 @@ const HeroCard = ({ data, isLoading }) => {
     };
   }, []);
 
+  // Get dynamic text and icon based on API code (default to clear sky if loading)
+  const weatherInfo = getWeatherDetails(data?.weather_code);
+
   return (
     <div className="relative w-full h-72 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg overflow-hidden flex items-center p-8 mt-6">
       <div ref={mountRef} className="absolute inset-0 z-0 pointer-events-none"></div>
       
       <div className="relative z-10 text-white w-full flex justify-between items-center">
-        {/* Dynamic Data Injection */}
         <div>
           {isLoading ? (
             <h2 className="text-6xl font-bold mb-2 animate-pulse">--°C</h2>
@@ -60,7 +92,10 @@ const HeroCard = ({ data, isLoading }) => {
             <h2 className="text-6xl font-bold mb-2">{Math.round(data?.temperature_2m)}°C</h2>
           )}
           
-          <p className="text-xl font-medium text-indigo-100">Live Telemetry</p>
+          {/* Dynamic Condition Text */}
+          <p className="text-xl font-medium text-indigo-100">
+            {isLoading ? "Loading telemetry..." : weatherInfo.text}
+          </p>
           
           <div className="flex gap-4 mt-4 text-sm font-medium">
             <span className="bg-white/20 px-3 py-1.5 rounded-lg backdrop-blur-sm shadow-sm flex items-center">
@@ -74,8 +109,9 @@ const HeroCard = ({ data, isLoading }) => {
           </div>
         </div>
         
+        {/* Dynamic Icon Rendering */}
         <div className="text-right">
-           <i className="fa-solid fa-sun text-8xl text-yellow-300 drop-shadow-2xl"></i>
+           <i className={`fa-solid ${weatherInfo.icon} text-8xl drop-shadow-2xl`}></i>
         </div>
       </div>
     </div>
