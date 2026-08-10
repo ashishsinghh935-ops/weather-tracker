@@ -24,15 +24,16 @@ ChartJS.register(
   Legend
 );
 
-const WeatherChart = () => {
+const WeatherChart = ({ location }) => {
   const [chartData, setChartData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchHourlyData = async () => {
+      setIsLoading(true); // Reset loading state when fetching new city
       try {
-        // Fetch 24-hour forecast for Delhi
-        const url = 'https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&hourly=temperature_2m&forecast_days=1';
+        // Fetch 24-hour forecast using the dynamic location prop!
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&hourly=temperature_2m&forecast_days=1`;
         const response = await fetch(url);
         const data = await response.json();
 
@@ -70,7 +71,7 @@ const WeatherChart = () => {
     };
 
     fetchHourlyData();
-  }, []);
+  }, [location]); // <--- React re-runs the fetch every time the location changes
 
   // Make the chart look clean and remove grid lines
   const options = {

@@ -1,68 +1,110 @@
-const Sidebar = () => {
+import { useState } from 'react';
+
+const Sidebar = ({ onCitySelect }) => {
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // This fires every time you type a letter
+  const handleSearchTyping = async (e) => {
+    const value = e.target.value;
+    setQuery(value);
+
+    // Only search if the user typed at least 3 letters
+    if (value.length > 2) {
+      try {
+        const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5&language=en&format=json`);
+        const data = await response.json();
+        
+        if (data.results) {
+          setSuggestions(data.results);
+          setIsDropdownOpen(true);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (error) {
+        console.error("Geocoding fetch error:", error);
+      }
+    } else {
+      setIsDropdownOpen(false);
+      setSuggestions([]);
+    }
+  };
+
+  const handleCitySelect = (city) => {
+    setQuery(`${city.name}, ${city.country}`);
+    setIsDropdownOpen(false);
+    
+    // Send this data up to App.jsx!
+    if (onCitySelect) {
+      onCitySelect({
+        name: city.name,
+        country: city.country || '',
+        lat: city.latitude,
+        lon: city.longitude
+      });
+    }
+  };
+
   return (
-    <aside className="w-72 min-w-[18rem] h-full bg-white border-r border-slate-200 p-6 flex flex-col gap-6 overflow-y-auto">
-      
+    <div className="w-64 bg-white h-screen border-r border-slate-100 p-6 flex flex-col">
       {/* Brand Header */}
-      <div className="flex items-center gap-3">
-        <div className="bg-indigo-600 text-white w-9 h-9 flex items-center justify-center rounded-lg text-xl">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="bg-indigo-600 p-2 rounded-lg text-white">
           <i className="fa-solid fa-cloud-bolt"></i>
         </div>
         <div>
-          <h2 className="text-xl font-bold text-slate-900 leading-tight">WeatherPro</h2>
-          <span className="text-[0.65rem] bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded font-bold uppercase tracking-wide">
-            Enterprise
-          </span>
+          <h1 className="font-bold text-xl text-slate-800 leading-tight">WeatherPro</h1>
+          <p className="text-[10px] font-bold text-indigo-600 tracking-wider">ENTERPRISE</p>
         </div>
       </div>
 
-      {/* Search Area */}
-      <div className="relative flex items-center gap-2">
-        <div className="relative flex-1">
-          <i className="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
-          <input 
-            type="text" 
-            placeholder="Search city..." 
-            className="w-full py-2.5 pl-9 pr-3 border border-slate-300 rounded-lg text-sm bg-slate-50 focus:outline-none focus:border-indigo-600 focus:bg-white focus:ring-4 focus:ring-indigo-600/10 transition-all"
+      {/* SEARCH BAR WITH DROPDOWN */}
+      <div className="relative w-full mb-8">
+        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
+          <i className="fa-solid fa-magnifying-glass text-slate-400 mr-2"></i>
+          <input
+            type="text"
+            className="w-full outline-none text-sm text-slate-700 bg-transparent"
+            placeholder="Search city..."
+            value={query}
+            onChange={handleSearchTyping}
           />
         </div>
-        <button className="bg-indigo-600 hover:bg-indigo-700 text-white w-10 h-10 rounded-lg flex items-center justify-center transition-colors shadow-sm hover:shadow-md">
-          <i className="fa-solid fa-location-crosshairs"></i>
-        </button>
+
+        {/* The Floating Dropdown Menu */}
+        {isDropdownOpen && suggestions.length > 0 && (
+          <ul className="absolute z-50 w-full bg-white border border-slate-200 shadow-xl rounded-lg mt-2 max-h-60 overflow-y-auto overflow-x-hidden">
+            {suggestions.map((city) => (
+              <li
+                key={city.id}
+                className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-slate-700 flex justify-between items-center border-b border-slate-50 last:border-0 transition-colors"
+                onClick={() => handleCitySelect(city)}
+              >
+                <div className="flex flex-col">
+                  <span className="font-bold text-slate-800">{city.name}</span>
+                  {city.admin1 && <span className="text-slate-400 text-xs">{city.admin1}</span>}
+                </div>
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                  {city.country_code}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
-      {/* Navigation Menu */}
-      <nav>
-        <p className="text-xs uppercase text-slate-400 font-bold mb-2 tracking-wider">Menu</p>
-        <ul className="flex flex-col gap-1">
-          <li className="bg-indigo-50 text-indigo-600 font-semibold rounded-md flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors">
-            <i className="fa-solid fa-chart-pie w-5 text-center"></i> 
-            <span>Dashboard</span>
-          </li>
-          <li className="text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-md flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors font-medium">
-            <i className="fa-solid fa-map-location-dot w-5 text-center"></i> 
-            <span>Weather Map</span>
-          </li>
-          <li className="text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-md flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors font-medium">
-            <i className="fa-solid fa-wind w-5 text-center"></i> 
-            <span>Air Quality Analytics</span>
-          </li>
-        </ul>
-      </nav>
-
-      {/* Saved Cities Placeholder */}
-      <div className="mt-2">
-        <div className="flex justify-between items-center mb-2">
-          <p className="text-xs uppercase text-slate-400 font-bold tracking-wider">Saved Cities</p>
-          <button className="text-slate-400 hover:text-indigo-600 transition-colors">
-            <i className="fa-solid fa-plus"></i>
-          </button>
+      {/* Menu Links */}
+      <div className="mb-4">
+        <p className="text-xs font-bold text-slate-400 mb-3 tracking-wider">MENU</p>
+        <div className="bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer mb-2">
+          <i className="fa-solid fa-chart-pie w-6"></i> Dashboard
         </div>
-        <ul className="flex flex-col gap-1">
-          <li className="text-sm text-slate-500 italic px-1">No pinned locations yet</li>
-        </ul>
+        <div className="text-slate-500 hover:bg-slate-50 hover:text-slate-800 px-4 py-2.5 rounded-lg flex items-center font-medium text-sm cursor-pointer transition-colors">
+          <i className="fa-solid fa-map-location-dot w-6"></i> Weather Map
+        </div>
       </div>
-
-    </aside>
+    </div>
   );
 };
 
