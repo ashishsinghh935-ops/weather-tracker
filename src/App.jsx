@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import HeroCard from './components/HeroCard';
 import WeatherChart from './components/WeatherChart';
 import WeatherMap from './components/WeatherMap';
 import AirQualityCard from './components/AirQualityCard';
+import MapView from './components/MapView';
 
 function App() {
-  // MASTER STATE: Holds the currently selected city (Defaults to Delhi)
   const [location, setLocation] = useState({
     name: 'Delhi, India',
     lat: 28.6139,
@@ -16,16 +17,13 @@ function App() {
   const [currentWeather, setCurrentWeather] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch data whenever the 'location' changes
   useEffect(() => {
     const fetchWeatherData = async () => {
       setIsLoading(true); 
       try {
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
-        
         const response = await fetch(url);
         const data = await response.json();
-        
         setCurrentWeather(data.current);
         setIsLoading(false);
       } catch (error) {
@@ -37,7 +35,6 @@ function App() {
     fetchWeatherData();
   }, [location]);
 
-  // Handler for when a user clicks a city in the Sidebar
   const handleCityChange = (cityData) => {
     setLocation({
       name: `${cityData.name}, ${cityData.country}`,
@@ -49,34 +46,40 @@ function App() {
   return (
     <div className="flex w-screen h-screen bg-slate-50 overflow-hidden text-slate-800">
       
-      {/* Pass the handler to the Sidebar */}
+      {/* Sidebar stays persistent across pages */}
       <Sidebar onCitySelect={handleCityChange} />
 
-      {/* EVERYTHING MUST STAY INSIDE THIS MAIN TAG */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-end">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900">{location.name}</h1>
-            <p className="text-sm text-slate-500 mt-1">
-              {isLoading ? "Establishing satellite connection..." : "Live Weather & Analytics"}
-            </p>
-          </div>
-        </header>
-        
-        <HeroCard data={currentWeather} isLoading={isLoading} />
-        
-        {/* Chart & Map Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-          <WeatherChart location={location} />
-          <WeatherMap location={location} />
-        </div>
-        
-        {/* New Air Quality Panel placed safely inside the layout */}
-        <div className="pb-8">
-          <AirQualityCard location={location} />
-        </div>
-        
-      </main>
+      {/* Page Routing Switchboard */}
+      <Routes>
+        {/* Dashboard Route */}
+        <Route path="/" element={
+          <main className="flex-1 p-8 overflow-y-auto">
+            <header className="flex justify-between items-end">
+              <div>
+                <h1 className="text-3xl font-bold text-slate-900">{location.name}</h1>
+                <p className="text-sm text-slate-500 mt-1">
+                  {isLoading ? "Establishing satellite connection..." : "Live Weather & Analytics"}
+                </p>
+              </div>
+            </header>
+            
+            <HeroCard data={currentWeather} isLoading={isLoading} />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
+              <WeatherChart location={location} />
+              <WeatherMap location={location} />
+            </div>
+            
+            <div className="pb-8">
+              <AirQualityCard location={location} />
+            </div>
+          </main>
+        } />
+
+        {/* Full-Screen Interactive Point-and-Click Map Route */}
+        <Route path="/map" element={<MapView />} />
+      </Routes>
+
     </div>
   );
 }

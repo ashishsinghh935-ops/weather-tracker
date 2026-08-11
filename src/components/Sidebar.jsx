@@ -1,16 +1,18 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 const Sidebar = ({ onCitySelect }) => {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  const routerLocation = useLocation();
+  const currentPath = routerLocation.pathname;
 
-  // This fires every time you type a letter
   const handleSearchTyping = async (e) => {
     const value = e.target.value;
     setQuery(value);
 
-    // Only search if the user typed at least 3 letters
     if (value.length > 2) {
       try {
         const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5&language=en&format=json`);
@@ -35,7 +37,6 @@ const Sidebar = ({ onCitySelect }) => {
     setQuery(`${city.name}, ${city.country}`);
     setIsDropdownOpen(false);
     
-    // Send this data up to App.jsx!
     if (onCitySelect) {
       onCitySelect({
         name: city.name,
@@ -47,7 +48,7 @@ const Sidebar = ({ onCitySelect }) => {
   };
 
   return (
-    <div className="w-64 bg-white h-screen border-r border-slate-100 p-6 flex flex-col">
+    <div className="w-64 bg-white h-screen border-r border-slate-100 p-6 flex flex-col shrink-0">
       {/* Brand Header */}
       <div className="flex items-center gap-3 mb-8">
         <div className="bg-indigo-600 p-2 rounded-lg text-white">
@@ -94,15 +95,27 @@ const Sidebar = ({ onCitySelect }) => {
         )}
       </div>
 
-      {/* Menu Links */}
+      {/* Menu Links with React Router */}
       <div className="mb-4">
         <p className="text-xs font-bold text-slate-400 mb-3 tracking-wider">MENU</p>
-        <div className="bg-indigo-50 text-indigo-700 px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer mb-2">
+        
+        <Link 
+          to="/" 
+          className={`px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer mb-2 transition-colors ${
+            currentPath === '/' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+          }`}
+        >
           <i className="fa-solid fa-chart-pie w-6"></i> Dashboard
-        </div>
-        <div className="text-slate-500 hover:bg-slate-50 hover:text-slate-800 px-4 py-2.5 rounded-lg flex items-center font-medium text-sm cursor-pointer transition-colors">
+        </Link>
+
+        <Link 
+          to="/map" 
+          className={`px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer transition-colors ${
+            currentPath === '/map' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+          }`}
+        >
           <i className="fa-solid fa-map-location-dot w-6"></i> Weather Map
-        </div>
+        </Link>
       </div>
     </div>
   );
