@@ -48,7 +48,7 @@ npm run dev
 The application will launch locally at http://localhost:5173/.
 
 
-##🏗️ Architecture Overview
+## 🏗️ Architecture Overview
 WeatherPro utilizes a multi-page architecture via React Router. The application maintains a central "Master State" in App.jsx that securely holds the currently selected location (latitude, longitude, and formatted name).
 
 When a user interacts with the MapView or the Sidebar search, the master state is updated, instantly triggering a re-render of the HeroCard, WeatherChart, AirQualityCard, and WeatherMap components with fresh satellite telemetry. The project is strictly typed for case-sensitive Linux server deployments and utilizes the latest Tailwind CSS v4 engine for optimal styling performance.
