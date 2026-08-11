@@ -3,9 +3,10 @@ import Sidebar from './components/Sidebar';
 import HeroCard from './components/HeroCard';
 import WeatherChart from './components/WeatherChart';
 import WeatherMap from './components/WeatherMap';
+import AirQualityCard from './components/AirQualityCard';
 
 function App() {
-  // 1. MASTER STATE: Holds the currently selected city (Defaults to Delhi)
+  // MASTER STATE: Holds the currently selected city (Defaults to Delhi)
   const [location, setLocation] = useState({
     name: 'Delhi, India',
     lat: 28.6139,
@@ -15,12 +16,11 @@ function App() {
   const [currentWeather, setCurrentWeather] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // 2. Fetch data whenever the 'location' changes
+  // Fetch data whenever the 'location' changes
   useEffect(() => {
     const fetchWeatherData = async () => {
       setIsLoading(true); 
       try {
-        // Now using dynamic variables for lat and lon!
         const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
         
         const response = await fetch(url);
@@ -35,9 +35,9 @@ function App() {
     };
 
     fetchWeatherData();
-  }, [location]); // <--- This array tells React: "Re-run the fetch every time location changes!"
+  }, [location]);
 
-  // 3. Handler for when a user clicks a city in the Sidebar
+  // Handler for when a user clicks a city in the Sidebar
   const handleCityChange = (cityData) => {
     setLocation({
       name: `${cityData.name}, ${cityData.country}`,
@@ -52,10 +52,10 @@ function App() {
       {/* Pass the handler to the Sidebar */}
       <Sidebar onCitySelect={handleCityChange} />
 
+      {/* EVERYTHING MUST STAY INSIDE THIS MAIN TAG */}
       <main className="flex-1 p-8 overflow-y-auto">
         <header className="flex justify-between items-end">
           <div>
-            {/* Dynamic Title! */}
             <h1 className="text-3xl font-bold text-slate-900">{location.name}</h1>
             <p className="text-sm text-slate-500 mt-1">
               {isLoading ? "Establishing satellite connection..." : "Live Weather & Analytics"}
@@ -65,10 +65,15 @@ function App() {
         
         <HeroCard data={currentWeather} isLoading={isLoading} />
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-8">
-          {/* Pass the location down to Chart and Map so they update too */}
+        {/* Chart & Map Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
           <WeatherChart location={location} />
           <WeatherMap location={location} />
+        </div>
+        
+        {/* New Air Quality Panel placed safely inside the layout */}
+        <div className="pb-8">
+          <AirQualityCard location={location} />
         </div>
         
       </main>
