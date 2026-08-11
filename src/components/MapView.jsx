@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default Leaflet marker icons in Vite
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 
@@ -15,7 +15,6 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Component to listen for clicks on the map canvas
 const ClickHandler = ({ onMapClick }) => {
   useMapEvents({
     click(e) {
@@ -25,7 +24,9 @@ const ClickHandler = ({ onMapClick }) => {
   return null;
 };
 
-const MapView = () => {
+const MapView = ({ onCitySelect }) => {
+  const navigate = useNavigate();
+  
   const [clickedLocation, setClickedLocation] = useState({
     lat: 28.6139,
     lon: 77.2090,
@@ -34,10 +35,8 @@ const MapView = () => {
   const [weatherData, setWeatherData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Create a reference to control the Marker
   const markerRef = useRef(null);
 
-  // Automatically open the popup whenever the clicked location changes
   useEffect(() => {
     if (markerRef.current) {
       markerRef.current.openPopup();
@@ -49,20 +48,52 @@ const MapView = () => {
     const { lat, lng } = latlng;
     
     try {
+      // 1. Fetch live weather data
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
-      const response = await fetch(weatherUrl);
-      const data = await response.json();
+      const weatherResponse = await fetch(weatherUrl);
+      const weatherData = await weatherResponse.json();
 
-      setWeatherData(data.current);
+      // 2. Reverse Geocoding: Translate coordinates to a real place name!
+      let placeName = "Unknown Location";
+      try {
+        const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+        const geoResponse = await fetch(geoUrl);
+        const geoData = await geoResponse.json();
+        
+        // Try to grab the most accurate name available
+        if (geoData && geoData.address) {
+          placeName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.county || geoData.address.state || geoData.address.country || "Unknown Location";
+        }
+      } catch (geoError) {
+        console.error("Failed to get place name:", geoError);
+      }
+
+      setWeatherData(weatherData.current);
+      
+      // 3. Format it exactly how you requested: "Place Name (Lat: X, Lon: Y)"
+      const formattedTitle = `${placeName} (Lat: ${lat.toFixed(2)}, Lon: ${lng.toFixed(2)})`;
+
       setClickedLocation({
         lat: lat,
         lon: lng,
-        name: `Lat: ${lat.toFixed(2)}, Lon: ${lng.toFixed(2)}`
+        name: formattedTitle
       });
       setIsLoading(false);
     } catch (error) {
       console.error("Map click weather fetch error:", error);
       setIsLoading(false);
+    }
+  };
+
+  const handleLaunchDashboard = () => {
+    if (onCitySelect) {
+      onCitySelect({
+        name: clickedLocation.name,
+        lat: clickedLocation.lat,
+        lon: clickedLocation.lon,
+        country: ""
+      });
+      navigate('/');
     }
   };
 
@@ -88,21 +119,29 @@ const MapView = () => {
           />
           <ClickHandler onMapClick={handleMapClick} />
           
-          {/* Attach the ref to the Marker! */}
           <Marker position={[clickedLocation.lat, clickedLocation.lon]} ref={markerRef}>
             <Popup>
-              <div className="p-2">
-                <p className="font-bold text-slate-800">{clickedLocation.name}</p>
+              <div className="p-2 w-48">
+                <p className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-2 leading-tight">
+                  {clickedLocation.name}
+                </p>
                 {isLoading ? (
-                  <p className="text-xs text-slate-400 mt-1">Scanning satellite telemetry...</p>
+                  <p className="text-xs text-slate-400">Scanning satellite telemetry...</p>
                 ) : weatherData ? (
-                  <div className="mt-2 text-sm">
-                    <p className="font-semibold text-indigo-600 text-lg">{weatherData.temperature_2m}°C</p>
+                  <div className="text-sm flex flex-col gap-1">
+                    <p className="font-bold text-indigo-600 text-xl mb-1">{weatherData.temperature_2m}°C</p>
                     <p className="text-slate-500 text-xs">Humidity: {weatherData.relative_humidity_2m}%</p>
                     <p className="text-slate-500 text-xs">Wind: {weatherData.wind_speed_10m} km/h</p>
+                    
+                    <button 
+                      onClick={handleLaunchDashboard}
+                      className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-sm"
+                    >
+                      <i className="fa-solid fa-chart-line mr-1"></i> View in Dashboard
+                    </button>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400 mt-1">Click telemetry loaded.</p>
+                  <p className="text-xs text-slate-400">Click telemetry loaded.</p>
                 )}
               </div>
             </Popup>

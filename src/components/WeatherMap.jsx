@@ -4,7 +4,7 @@ const WeatherMap = ({ location }) => {
       <h3 className="text-lg font-bold text-slate-800 mb-4">Live Radar</h3>
       
       <div className="flex-1 w-full h-full rounded-xl overflow-hidden z-0 border border-slate-200">
-        {/* Dynamic src URL based on the city name! */}
+        {/* We changed the q= parameter to use raw coordinates! */}
         <iframe 
           title="Google Map"
           width="100%" 
@@ -13,7 +13,7 @@ const WeatherMap = ({ location }) => {
           loading="lazy" 
           allowFullScreen 
           referrerPolicy="no-referrer-when-downgrade" 
-          src={`https://www.google.com/maps?q=${encodeURIComponent(location.name)}&z=10&output=embed`}
+          src={`https://www.google.com/maps?q=${location.lat},${location.lon}&z=10&output=embed`}
         ></iframe>
       </div>
     </div>
