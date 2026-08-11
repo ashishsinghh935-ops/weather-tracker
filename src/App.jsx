@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
-import HeroCard from './components/HeroCard';
+import HeroCard from './components/Herocard';
 import WeatherChart from './components/WeatherChart';
 import WeatherMap from './components/WeatherMap';
 import AirQualityCard from './components/AirQualityCard';
