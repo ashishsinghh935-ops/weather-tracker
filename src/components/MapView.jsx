@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -33,15 +33,22 @@ const MapView = () => {
   });
   const [weatherData, setWeatherData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Create a reference to control the Marker
+  const markerRef = useRef(null);
 
-  // When user clicks the map, fetch weather data for those exact coordinates
+  // Automatically open the popup whenever the clicked location changes
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.openPopup();
+    }
+  }, [clickedLocation]);
+
   const handleMapClick = async (latlng) => {
     setIsLoading(true);
     const { lat, lng } = latlng;
     
     try {
-      // 1. Fetch place name using Open-Meteo reverse geocoding or coordinate display
-      // 2. Fetch live weather for the clicked point
       const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
       const response = await fetch(weatherUrl);
       const data = await response.json();
@@ -81,7 +88,8 @@ const MapView = () => {
           />
           <ClickHandler onMapClick={handleMapClick} />
           
-          <Marker position={[clickedLocation.lat, clickedLocation.lon]}>
+          {/* Attach the ref to the Marker! */}
+          <Marker position={[clickedLocation.lat, clickedLocation.lon]} ref={markerRef}>
             <Popup>
               <div className="p-2">
                 <p className="font-bold text-slate-800">{clickedLocation.name}</p>

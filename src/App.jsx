@@ -77,7 +77,8 @@ function App() {
         } />
 
         {/* Full-Screen Interactive Point-and-Click Map Route */}
-        <Route path="/map" element={<MapView />} />
+        {/* We pass the handleCityChange down to the MapView so the button works! */}
+        <Route path="/map" element={<MapView onCitySelect={handleCityChange} />} />
       </Routes>
 
     </div>
