@@ -43,7 +43,7 @@ const App = () => {
     <div className="flex h-screen bg-gray-100 text-gray-900 font-sans">
       
       {/* Navigation Sidebar */}
-      <Sidebar setLocation={setLocation} />
+      <Sidebar location={location} setLocation={setLocation} />
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
@@ -64,7 +64,7 @@ const App = () => {
                   {/* New 7-Day Forecast Carousel */}
                   <WeeklyForecast dailyData={weatherData?.daily} />
                   
-                  <WeatherMap lat={location.lat} lon={location.lon} />
+                  <WeatherMap location={location} />
                   <AirQualityCard lat={location.lat} lon={location.lon} />
                 </>
               )}
