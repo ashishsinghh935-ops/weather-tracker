@@ -1,151 +1,125 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
+
+// Fix for default Leaflet icons not loading in React
 import L from 'leaflet';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
-  iconUrl: icon,
-  shadowUrl: iconShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: markerIcon,
+  iconRetinaUrl: markerIcon2x,
+  shadowUrl: markerShadow,
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
-const ClickHandler = ({ onMapClick }) => {
+// Component to handle map clicks and API fetching
+const LocationMarker = ({ setLocation, navigate }) => {
+  const [position, setPosition] = useState(null);
+  const [weatherData, setWeatherData] = useState(null);
+  const [loading, setLoading] = useState(false);
+
   useMapEvents({
-    click(e) {
-      onMapClick(e.latlng);
+    click: async (e) => {
+      const { lat, lng } = e.latlng;
+      setPosition(e.latlng);
+      setLoading(true);
+
+      try {
+        // Reverse Geocoding API to get City Name
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+        const geoData = await geoRes.json();
+        const cityName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.name || "Unknown Location";
+
+        // Open-Meteo API for Weather Data at Coordinates
+        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=relativehumidity_2m&timezone=auto`);
+        const weatherDataRes = await weatherRes.json();
+
+        setWeatherData({
+          name: cityName,
+          lat: lat.toFixed(2),
+          lon: lng.toFixed(2),
+          temp: weatherDataRes.current_weather.temperature,
+          wind: weatherDataRes.current_weather.windspeed,
+          humidity: weatherDataRes.hourly.relativehumidity_2m[0]
+        });
+      } catch (error) {
+        console.error("Error fetching map location data:", error);
+      } finally {
+        setLoading(false);
+      }
     },
   });
-  return null;
+
+  return position === null ? null : (
+    <Marker position={position}>
+      <Popup className="rounded-lg shadow-sm">
+        {loading ? (
+          <div className="p-4 text-center text-gray-500">Scanning atmosphere...</div>
+        ) : weatherData ? (
+          <div className="flex flex-col space-y-3 min-w-[200px] p-1">
+            <h4 className="font-bold text-gray-900">{weatherData.name}</h4>
+            <p className="text-xs text-gray-500">(Lat: {weatherData.lat}, Lon: {weatherData.lon})</p>
+            
+            <div className="text-2xl font-bold text-indigo-600 my-2">
+              {weatherData.temp}°C
+            </div>
+            
+            <div className="text-xs text-gray-600 flex flex-col space-y-1 mb-2">
+              <span>Humidity: {weatherData.humidity}%</span>
+              <span>Wind: {weatherData.wind} km/h</span>
+            </div>
+            
+            <button 
+              className="w-full bg-indigo-600 text-white rounded-md py-2 mt-2 hover:bg-indigo-700 transition font-semibold text-sm flex items-center justify-center gap-2"
+              onClick={() => {
+                // Update master state in App.jsx
+                setLocation({
+                  lat: parseFloat(weatherData.lat),
+                  lon: parseFloat(weatherData.lon),
+                  name: weatherData.name
+                });
+                // Route back to the main dashboard
+                navigate('/');
+              }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              View in Dashboard
+            </button>
+          </div>
+        ) : null}
+      </Popup>
+    </Marker>
+  );
 };
 
-const MapView = ({ onCitySelect }) => {
+const MapView = ({ location, setLocation }) => {
   const navigate = useNavigate();
-  
-  const [clickedLocation, setClickedLocation] = useState({
-    lat: 28.6139,
-    lon: 77.2090,
-    name: "Delhi, India"
-  });
-  const [weatherData, setWeatherData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const markerRef = useRef(null);
-
-  useEffect(() => {
-    if (markerRef.current) {
-      markerRef.current.openPopup();
-    }
-  }, [clickedLocation]);
-
-  const handleMapClick = async (latlng) => {
-    setIsLoading(true);
-    const { lat, lng } = latlng;
-    
-    try {
-      // 1. Fetch live weather data
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code`;
-      const weatherResponse = await fetch(weatherUrl);
-      const weatherData = await weatherResponse.json();
-
-      // 2. Reverse Geocoding: Translate coordinates to a real place name!
-      let placeName = "Unknown Location";
-      try {
-        const geoUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
-        const geoResponse = await fetch(geoUrl);
-        const geoData = await geoResponse.json();
-        
-        // Try to grab the most accurate name available
-        if (geoData && geoData.address) {
-          placeName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.address.county || geoData.address.state || geoData.address.country || "Unknown Location";
-        }
-      } catch (geoError) {
-        console.error("Failed to get place name:", geoError);
-      }
-
-      setWeatherData(weatherData.current);
-      
-      // 3. Format it exactly how you requested: "Place Name (Lat: X, Lon: Y)"
-      const formattedTitle = `${placeName} (Lat: ${lat.toFixed(2)}, Lon: ${lng.toFixed(2)})`;
-
-      setClickedLocation({
-        lat: lat,
-        lon: lng,
-        name: formattedTitle
-      });
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Map click weather fetch error:", error);
-      setIsLoading(false);
-    }
-  };
-
-  const handleLaunchDashboard = () => {
-    if (onCitySelect) {
-      onCitySelect({
-        name: clickedLocation.name,
-        lat: clickedLocation.lat,
-        lon: clickedLocation.lon,
-        country: ""
-      });
-      navigate('/');
-    }
-  };
 
   return (
-    <div className="flex-1 h-screen flex flex-col relative">
-      <div className="p-6 bg-white border-b border-slate-100 flex justify-between items-center z-10">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Interactive Radar & Point-and-Click Weather</h2>
-          <p className="text-sm text-slate-400">Click anywhere on the map to instantly scan atmospheric data for that coordinate.</p>
-        </div>
+    <div className="h-full w-full flex flex-col space-y-2">
+      <div className="mb-2">
+        <h2 className="text-2xl font-bold text-gray-900">Interactive Radar & Point-and-Click Weather</h2>
+        <p className="text-gray-500 text-sm mt-1">Click anywhere on the map to instantly scan atmospheric data for that coordinate.</p>
       </div>
-
-      <div className="flex-1 w-full relative z-0">
+      
+      {/* Map Container */}
+      <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
         <MapContainer 
-          center={[28.6139, 77.2090]} 
-          zoom={8} 
-          scrollWheelZoom={true} 
-          style={{ height: '100%', width: '100%' }}
+          center={[location.lat, location.lon]} 
+          zoom={5} 
+          style={{ height: '100%', width: '100%', zIndex: 0 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          <ClickHandler onMapClick={handleMapClick} />
-          
-          <Marker position={[clickedLocation.lat, clickedLocation.lon]} ref={markerRef}>
-            <Popup>
-              <div className="p-2 w-48">
-                <p className="font-bold text-slate-800 border-b border-slate-100 pb-2 mb-2 leading-tight">
-                  {clickedLocation.name}
-                </p>
-                {isLoading ? (
-                  <p className="text-xs text-slate-400">Scanning satellite telemetry...</p>
-                ) : weatherData ? (
-                  <div className="text-sm flex flex-col gap-1">
-                    <p className="font-bold text-indigo-600 text-xl mb-1">{weatherData.temperature_2m}°C</p>
-                    <p className="text-slate-500 text-xs">Humidity: {weatherData.relative_humidity_2m}%</p>
-                    <p className="text-slate-500 text-xs">Wind: {weatherData.wind_speed_10m} km/h</p>
-                    
-                    <button 
-                      onClick={handleLaunchDashboard}
-                      className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg text-xs font-bold transition-colors shadow-sm"
-                    >
-                      <i className="fa-solid fa-chart-line mr-1"></i> View in Dashboard
-                    </button>
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-400">Click telemetry loaded.</p>
-                )}
-              </div>
-            </Popup>
-          </Marker>
+          <LocationMarker setLocation={setLocation} navigate={navigate} />
         </MapContainer>
       </div>
     </div>

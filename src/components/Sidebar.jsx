@@ -1,121 +1,102 @@
-import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-const Sidebar = ({ onCitySelect }) => {
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
-  const routerLocation = useLocation();
-  const currentPath = routerLocation.pathname;
+const Sidebar = ({ setLocation }) => {
+  const locationPath = useLocation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearchTyping = async (e) => {
-    const value = e.target.value;
-    setQuery(value);
+  // Handle manual city search
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
 
-    if (value.length > 2) {
-      try {
-        const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${value}&count=5&language=en&format=json`);
-        const data = await response.json();
-        
-        if (data.results) {
-          setSuggestions(data.results);
-          setIsDropdownOpen(true);
-        } else {
-          setSuggestions([]);
-        }
-      } catch (error) {
-        console.error("Geocoding fetch error:", error);
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${searchQuery}&count=1&language=en&format=json`);
+      const data = await res.json();
+      
+      if (data.results && data.results.length > 0) {
+        const { latitude, longitude, name, country } = data.results[0];
+        setLocation({
+          lat: latitude,
+          lon: longitude,
+          name: `${name}, ${country}`
+        });
+        setSearchQuery('');
+        // Instantly route back to dashboard when a new city is searched
+        navigate('/');
+      } else {
+        alert("City not found!");
       }
-    } else {
-      setIsDropdownOpen(false);
-      setSuggestions([]);
+    } catch (error) {
+      console.error("Error searching city:", error);
     }
   };
 
-  const handleCitySelect = (city) => {
-    setQuery(`${city.name}, ${city.country}`);
-    setIsDropdownOpen(false);
-    
-    if (onCitySelect) {
-      onCitySelect({
-        name: city.name,
-        country: city.country || '',
-        lat: city.latitude,
-        lon: city.longitude
-      });
-    }
-  };
+  // Helper to highlight the active menu item
+  const isActive = (path) => locationPath.pathname === path;
 
   return (
-    <div className="w-64 bg-white h-screen border-r border-slate-100 p-6 flex flex-col shrink-0">
-      {/* Brand Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="bg-indigo-600 p-2 rounded-lg text-white">
-          <i className="fa-solid fa-cloud-bolt"></i>
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col p-4 shadow-sm z-10 hidden md:flex">
+      {/* Brand Logo */}
+      <div className="flex items-center space-x-3 mb-8">
+        <div className="bg-indigo-600 p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+          </svg>
         </div>
         <div>
-          <h1 className="font-bold text-xl text-slate-800 leading-tight">WeatherPro</h1>
-          <p className="text-[10px] font-bold text-indigo-600 tracking-wider">ENTERPRISE</p>
+          <h1 className="text-xl font-bold text-gray-900 leading-tight">WeatherPro</h1>
+          <p className="text-[10px] text-indigo-600 font-bold tracking-widest uppercase">Enterprise</p>
         </div>
       </div>
 
-      {/* SEARCH BAR WITH DROPDOWN */}
-      <div className="relative w-full mb-8">
-        <div className="flex items-center bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:bg-white transition-all">
-          <i className="fa-solid fa-magnifying-glass text-slate-400 mr-2"></i>
-          <input
-            type="text"
-            className="w-full outline-none text-sm text-slate-700 bg-transparent"
-            placeholder="Search city..."
-            value={query}
-            onChange={handleSearchTyping}
-          />
-        </div>
+      {/* Search Bar */}
+      <form onSubmit={handleSearch} className="mb-8 relative">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input 
+          type="text" 
+          placeholder="Search city..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+        />
+      </form>
 
-        {/* The Floating Dropdown Menu */}
-        {isDropdownOpen && suggestions.length > 0 && (
-          <ul className="absolute z-50 w-full bg-white border border-slate-200 shadow-xl rounded-lg mt-2 max-h-60 overflow-y-auto overflow-x-hidden">
-            {suggestions.map((city) => (
-              <li
-                key={city.id}
-                className="px-4 py-3 hover:bg-indigo-50 cursor-pointer text-sm text-slate-700 flex justify-between items-center border-b border-slate-50 last:border-0 transition-colors"
-                onClick={() => handleCitySelect(city)}
-              >
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800">{city.name}</span>
-                  {city.admin1 && <span className="text-slate-400 text-xs">{city.admin1}</span>}
-                </div>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded">
-                  {city.country_code}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      {/* Navigation Menu */}
+      <div className="flex-1">
+        <p className="text-xs font-bold text-gray-400 mb-4 tracking-wider">MENU</p>
+        <nav className="space-y-2">
+          <Link 
+            to="/" 
+            className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors duration-200 ${
+              isActive('/') 
+                ? 'bg-indigo-50 text-indigo-700 font-semibold' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            <span>Dashboard</span>
+          </Link>
 
-      {/* Menu Links with React Router */}
-      <div className="mb-4">
-        <p className="text-xs font-bold text-slate-400 mb-3 tracking-wider">MENU</p>
-        
-        <Link 
-          to="/" 
-          className={`px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer mb-2 transition-colors ${
-            currentPath === '/' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-          }`}
-        >
-          <i className="fa-solid fa-chart-pie w-6"></i> Dashboard
-        </Link>
-
-        <Link 
-          to="/map" 
-          className={`px-4 py-2.5 rounded-lg flex items-center font-semibold text-sm cursor-pointer transition-colors ${
-            currentPath === '/map' ? 'bg-indigo-50 text-indigo-700' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-          }`}
-        >
-          <i className="fa-solid fa-map-location-dot w-6"></i> Weather Map
-        </Link>
+          <Link 
+            to="/map" 
+            className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors duration-200 ${
+              isActive('/map') 
+                ? 'bg-indigo-50 text-indigo-700 font-semibold' 
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+            </svg>
+            <span>Weather Map</span>
+          </Link>
+        </nav>
       </div>
     </div>
   );
