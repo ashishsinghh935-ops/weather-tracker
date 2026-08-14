@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
 
@@ -16,6 +16,19 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+// NEW: This component forces the map to smoothly fly to the active dashboard location
+const MapUpdater = ({ lat, lon }) => {
+  const map = useMap();
+  useEffect(() => {
+    // flyTo creates a smooth, enterprise-grade panning animation
+    map.flyTo([lat, lon], 10, {
+      duration: 1.5 
+    });
+  }, [lat, lon, map]);
+  
+  return null;
+};
+
 // Component to handle map clicks and API fetching
 const LocationMarker = ({ setLocation, navigate }) => {
   const [position, setPosition] = useState(null);
@@ -29,12 +42,10 @@ const LocationMarker = ({ setLocation, navigate }) => {
       setLoading(true);
 
       try {
-        // Reverse Geocoding API to get City Name
         const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
         const geoData = await geoRes.json();
         const cityName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.name || "Unknown Location";
 
-        // Open-Meteo API for Weather Data at Coordinates
         const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true&hourly=relativehumidity_2m&timezone=auto`);
         const weatherDataRes = await weatherRes.json();
 
@@ -76,13 +87,11 @@ const LocationMarker = ({ setLocation, navigate }) => {
             <button 
               className="w-full bg-indigo-600 text-white rounded-md py-2 mt-2 hover:bg-indigo-700 transition font-semibold text-sm flex items-center justify-center gap-2"
               onClick={() => {
-                // Update master state in App.jsx
                 setLocation({
                   lat: parseFloat(weatherData.lat),
                   lon: parseFloat(weatherData.lon),
                   name: weatherData.name
                 });
-                // Route back to the main dashboard
                 navigate('/');
               }}
             >
@@ -108,17 +117,28 @@ const MapView = ({ location, setLocation }) => {
         <p className="text-gray-500 text-sm mt-1">Click anywhere on the map to instantly scan atmospheric data for that coordinate.</p>
       </div>
       
-      {/* Map Container */}
       <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
         <MapContainer 
           center={[location.lat, location.lon]} 
-          zoom={5} 
+          zoom={10} 
           style={{ height: '100%', width: '100%', zIndex: 0 }}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+          
+          {/* Mounts the dynamic panning hook */}
+          <MapUpdater lat={location.lat} lon={location.lon} />
+
+          {/* Drops a permanent pin on your active dashboard city */}
+          <Marker position={[location.lat, location.lon]}>
+            <Popup className="font-semibold text-indigo-600">
+              Active Location:<br/>
+              <span className="text-gray-800">{location.name}</span>
+            </Popup>
+          </Marker>
+
           <LocationMarker setLocation={setLocation} navigate={navigate} />
         </MapContainer>
       </div>
