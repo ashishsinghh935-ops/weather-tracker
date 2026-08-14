@@ -16,11 +16,9 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// NEW: This component forces the map to smoothly fly to the active dashboard location
 const MapUpdater = ({ lat, lon }) => {
   const map = useMap();
   useEffect(() => {
-    // flyTo creates a smooth, enterprise-grade panning animation
     map.flyTo([lat, lon], 10, {
       duration: 1.5 
     });
@@ -109,6 +107,44 @@ const LocationMarker = ({ setLocation, navigate }) => {
 
 const MapView = ({ location, setLocation }) => {
   const navigate = useNavigate();
+  const [isLocating, setIsLocating] = useState(false);
+
+  // HTML5 Geolocation API Handler
+  const handleLocateMe = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const { latitude, longitude } = pos.coords;
+        try {
+          // Reverse geocode to get the physical city name
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          const geoData = await geoRes.json();
+          const cityName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.name || "My Location";
+          
+          // Updating this state will instantly fly the map to the user's coordinates
+          setLocation({
+            lat: latitude,
+            lon: longitude,
+            name: cityName
+          });
+        } catch (error) {
+          console.error("Error fetching location name:", error);
+          setLocation({ lat: latitude, lon: longitude, name: "My Location" });
+        } finally {
+          setIsLocating(false);
+        }
+      }, 
+      (error) => {
+        setIsLocating(false);
+        alert("Unable to retrieve your location. Please check your browser permissions.");
+      }
+    );
+  };
 
   return (
     <div className="h-full w-full flex flex-col space-y-2">
@@ -118,6 +154,31 @@ const MapView = ({ location, setLocation }) => {
       </div>
       
       <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
+        
+        {/* Floating GPS "Locate Me" Button */}
+        <button 
+          onClick={handleLocateMe}
+          disabled={isLocating}
+          className="absolute top-4 right-4 z-[400] bg-white p-3 rounded-full shadow-lg border border-gray-200 hover:bg-gray-50 transition-all group disabled:opacity-70 flex items-center justify-center cursor-pointer"
+          title="Find My Location"
+        >
+          {isLocating ? (
+            <svg className="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-700 group-hover:text-indigo-600 transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="M4 12H2"></path>
+              <path d="M22 12h-2"></path>
+              <circle cx="12" cy="12" r="8"></circle>
+            </svg>
+          )}
+        </button>
+
         <MapContainer 
           center={[location.lat, location.lon]} 
           zoom={10} 
@@ -128,10 +189,8 @@ const MapView = ({ location, setLocation }) => {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           
-          {/* Mounts the dynamic panning hook */}
           <MapUpdater lat={location.lat} lon={location.lon} />
 
-          {/* Drops a permanent pin on your active dashboard city */}
           <Marker position={[location.lat, location.lon]}>
             <Popup className="font-semibold text-indigo-600">
               Active Location:<br/>
