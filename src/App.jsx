@@ -9,7 +9,7 @@ import WeeklyForecast from './components/WeeklyForecast';
 import WeatherMap from './components/WeatherMap';
 import AirQualityCard from './components/AirQualityCard';
 import MapView from './components/MapView';
-import DashboardSkeleton from './components/DashboardSkeleton'; // NEW IMPORT
+import DashboardSkeleton from './components/DashboardSkeleton';
 
 const App = () => {
   const [location, setLocation] = useState({
@@ -41,7 +41,7 @@ const App = () => {
       setLoading(true);
       
       try {
-        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&current_weather=true&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code,is_day&current_weather=true&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
         const data = await response.json();
         
         if (weatherCache.current.size >= CACHE_LIMIT) {
@@ -62,24 +62,29 @@ const App = () => {
     fetchWeather();
   }, [location]);
 
+  // Determine if it is currently day or night from Open-Meteo's current_weather payload (1 = day, 0 = night)
+  const isDay = weatherData?.current?.is_day ?? weatherData?.current_weather?.is_day ?? 1;
+
   return (
-    <div className="flex h-screen bg-gray-100 text-gray-900 font-sans">
+    // Dynamic Root Background Theme mapping to Day or Night state
+    <div className={`flex h-screen font-sans transition-colors duration-500 ${
+      isDay ? 'bg-gray-100 text-gray-900' : 'bg-slate-950 text-slate-100'
+    }`}>
       
-      <Sidebar setLocation={setLocation} />
+      <Sidebar setLocation={setLocation} isDay={isDay} />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <Routes>
           
           <Route path="/" element={
             <div className="max-w-6xl mx-auto space-y-6">
-              {/* Renders the slick UI skeleton while data is fetching */}
               {loading ? (
                 <DashboardSkeleton />
               ) : (
                 <>
-                  <HeroCard weatherData={weatherData} locationName={location.name} location={location} />
-                  <WeatherChart hourlyData={weatherData?.hourly} location={location} />
-                  <WeeklyForecast dailyData={weatherData?.daily} location={location} />
+                  <HeroCard weatherData={weatherData} locationName={location.name} location={location} isDay={isDay} />
+                  <WeatherChart hourlyData={weatherData?.hourly} location={location} isDay={isDay} />
+                  <WeeklyForecast dailyData={weatherData?.daily} location={location} isDay={isDay} />
                   <WeatherMap location={location} />
                   <AirQualityCard location={location} />
                 </>
