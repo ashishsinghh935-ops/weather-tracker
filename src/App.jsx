@@ -20,12 +20,12 @@ const App = () => {
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Centralized API Fetching - RESTORED FULL PARAMETERS
+  // Centralized API Fetching
   useEffect(() => {
     const fetchWeather = async () => {
       setLoading(true);
       try {
-        // We are requesting 'current', 'hourly', AND 'daily' data here so no components starve
+        // Comprehensive API fetch to ensure no component is starved of data
         const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&current_weather=true&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
         const data = await response.json();
         setWeatherData(data);
@@ -46,6 +46,7 @@ const App = () => {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8">
         <Routes>
+          
           <Route path="/" element={
             <div className="max-w-6xl mx-auto space-y-6">
               {loading ? (
@@ -54,11 +55,16 @@ const App = () => {
                 </div>
               ) : (
                 <>
-                  <HeroCard weatherData={weatherData} locationName={location.name} />
-                  <WeatherChart hourlyData={weatherData?.hourly} />
-                  <WeeklyForecast dailyData={weatherData?.daily} />
+                  {/* Passing the full location object to ALL components to stop the undefined 'lat' crashes */}
+                  <HeroCard weatherData={weatherData} locationName={location.name} location={location} />
+                  
+                  <WeatherChart hourlyData={weatherData?.hourly} location={location} />
+                  
+                  <WeeklyForecast dailyData={weatherData?.daily} location={location} />
+                  
                   <WeatherMap location={location} />
-                  <AirQualityCard lat={location.lat} lon={location.lon} />
+                  
+                  <AirQualityCard location={location} />
                 </>
               )}
             </div>
@@ -67,6 +73,7 @@ const App = () => {
           <Route path="/map" element={
             <MapView location={location} setLocation={setLocation} />
           } />
+          
         </Routes>
       </div>
     </div>
