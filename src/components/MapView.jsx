@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents, useMap } from 'react-leaflet';
 import { useNavigate } from 'react-router-dom';
 import 'leaflet/dist/leaflet.css';
+import WindLayer from './WindLayer';
 
 // Fix for default Leaflet icons not loading in React
 import L from 'leaflet';
@@ -121,12 +122,10 @@ const MapView = ({ location, setLocation }) => {
       async (pos) => {
         const { latitude, longitude } = pos.coords;
         try {
-          // Reverse geocode to get the physical city name
           const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
           const geoData = await geoRes.json();
           const cityName = geoData.address.city || geoData.address.town || geoData.address.village || geoData.name || "My Location";
           
-          // Updating this state will instantly fly the map to the user's coordinates
           setLocation({
             lat: latitude,
             lon: longitude,
@@ -155,6 +154,9 @@ const MapView = ({ location, setLocation }) => {
       
       <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
         
+        {/* Canvas Particle Vector Overlay */}
+        <WindLayer windSpeed={15} windDirection={120} />
+
         {/* Floating GPS "Locate Me" Button */}
         <button 
           onClick={handleLocateMe}
