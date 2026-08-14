@@ -21,21 +21,17 @@ const App = () => {
   const [loading, setLoading] = useState(true);
 
   // Algorithmic LRU Cache using a Map inside a Ref
-  // This persists across re-renders without causing infinite loops
   const weatherCache = useRef(new Map());
   const CACHE_LIMIT = 5;
 
   useEffect(() => {
     const fetchWeather = async () => {
-      // Create a unique key for the current coordinates
       const cacheKey = `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
 
-      // 1. Cache HIT: Data exists in memory
       if (weatherCache.current.has(cacheKey)) {
         console.log(`⚡ Cache Hit for ${location.name}. Loading instantly from memory.`);
         const cachedData = weatherCache.current.get(cacheKey);
         
-        // LRU Logic: Delete and re-insert to move this item to the "most recently used" position
         weatherCache.current.delete(cacheKey);
         weatherCache.current.set(cacheKey, cachedData);
         
@@ -44,22 +40,20 @@ const App = () => {
         return; 
       }
 
-      // 2. Cache MISS: Fetch from the Open-Meteo API
       console.log(`🌐 Cache Miss for ${location.name}. Fetching fresh API data.`);
       setLoading(true);
       
       try {
-        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&current_weather=true&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
+        // Fetching real-world wind direction for the canvas vectors
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,wind_direction_10m,weather_code&current_weather=true&hourly=temperature_2m,relative_humidity_2m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
         const data = await response.json();
         
-        // LRU Eviction Logic: If cache is full, remove the oldest item (first item in the Map)
         if (weatherCache.current.size >= CACHE_LIMIT) {
           const oldestKey = weatherCache.current.keys().next().value;
           weatherCache.current.delete(oldestKey);
           console.log(`🗑️ Cache full. Evicted oldest entry: ${oldestKey}`);
         }
 
-        // Store new data in the cache
         weatherCache.current.set(cacheKey, data);
         setWeatherData(data);
         
@@ -100,7 +94,7 @@ const App = () => {
           } />
 
           <Route path="/map" element={
-            <MapView location={location} setLocation={setLocation} />
+            <MapView location={location} setLocation={setLocation} weatherData={weatherData} />
           } />
           
         </Routes>

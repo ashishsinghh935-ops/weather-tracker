@@ -106,9 +106,15 @@ const LocationMarker = ({ setLocation, navigate }) => {
   );
 };
 
-const MapView = ({ location, setLocation }) => {
+// Accept weatherData dynamically from master App.jsx state
+const MapView = ({ location, setLocation, weatherData }) => {
   const navigate = useNavigate();
   const [isLocating, setIsLocating] = useState(false);
+  const [showWind, setShowWind] = useState(false);
+
+  // Extract live wind vectors from the payload
+  const actualWindSpeed = weatherData?.current?.wind_speed_10m || 0;
+  const actualWindDirection = weatherData?.current?.wind_direction_10m || 0;
 
   // HTML5 Geolocation API Handler
   const handleLocateMe = () => {
@@ -154,8 +160,8 @@ const MapView = ({ location, setLocation }) => {
       
       <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
         
-        {/* Canvas Particle Vector Overlay */}
-        <WindLayer windSpeed={15} windDirection={120} />
+        {/* Pass live Open-Meteo variables directly into the Canvas */}
+        {showWind && <WindLayer windSpeed={actualWindSpeed} windDirection={actualWindDirection} />}
 
         {/* Floating GPS "Locate Me" Button */}
         <button 
@@ -179,6 +185,17 @@ const MapView = ({ location, setLocation }) => {
               <circle cx="12" cy="12" r="8"></circle>
             </svg>
           )}
+        </button>
+
+        {/* Wind Radar Toggle Button */}
+        <button 
+          onClick={() => setShowWind(!showWind)}
+          className={`absolute top-20 right-4 z-[400] p-3 rounded-full shadow-lg border transition-all group flex items-center justify-center cursor-pointer ${showWind ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
+          title="Toggle Wind Radar"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${showWind ? 'text-indigo-600' : 'text-gray-700 group-hover:text-indigo-600 transition-colors'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2" />
+          </svg>
         </button>
 
         <MapContainer 
