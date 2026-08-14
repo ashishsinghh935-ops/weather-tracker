@@ -15,7 +15,7 @@ const HeroCard = ({ weatherData, locationName }) => {
   // Wait for data to load before trying to render
   if (!weatherData) return null;
 
-  // Safely extract values from the new API structure we set up in App.jsx
+  // Safely extract values from the API structure
   const temp = weatherData?.current?.temperature_2m ?? weatherData?.current_weather?.temperature;
   const humidity = weatherData?.current?.relative_humidity_2m ?? "--";
   const wind = weatherData?.current?.wind_speed_10m ?? weatherData?.current_weather?.windspeed ?? "--";
@@ -26,8 +26,8 @@ const HeroCard = ({ weatherData, locationName }) => {
   return (
     <div className="w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-purple-600 rounded-xl p-8 text-white shadow-lg relative overflow-hidden">
       {/* Background decorations */}
-      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
-      <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-white opacity-10 rounded-full blur-xl"></div>
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+      <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
       
       <div className="relative z-10 flex justify-between items-center">
         <div>
@@ -35,7 +35,7 @@ const HeroCard = ({ weatherData, locationName }) => {
           
           {/* Temperature Display */}
           <div className="text-6xl font-bold mb-2">
-            {temp !== undefined && temp !== null ? Math.round(temp) : "NaN"}°C
+            {temp !== undefined && temp !== null ? Math.round(temp) : "--"}°C
           </div>
           
           <div className="text-lg font-medium text-indigo-100 mb-6">
@@ -43,20 +43,20 @@ const HeroCard = ({ weatherData, locationName }) => {
           </div>
           
           <div className="flex space-x-4">
-            {/* Humidity Badge */}
-            <div className="flex items-center bg-white bg-opacity-20 rounded-lg px-3 py-1.5 backdrop-blur-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* Humidity Badge - FIXED TAILWIND V4 SYNTAX */}
+            <div className="flex items-center bg-white/20 rounded-lg px-3 py-1.5 backdrop-blur-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
               </svg>
-              <span className="text-sm font-medium">Humidity: {humidity}%</span>
+              <span className="text-sm font-medium text-white">Humidity: {humidity}%</span>
             </div>
             
-            {/* Wind Badge */}
-            <div className="flex items-center bg-white bg-opacity-20 rounded-lg px-3 py-1.5 backdrop-blur-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-indigo-100" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {/* Wind Badge - FIXED TAILWIND V4 SYNTAX */}
+            <div className="flex items-center bg-white/20 rounded-lg px-3 py-1.5 backdrop-blur-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
-              <span className="text-sm font-medium">Wind: {wind} km/h</span>
+              <span className="text-sm font-medium text-white">Wind: {wind} km/h</span>
             </div>
           </div>
         </div>
