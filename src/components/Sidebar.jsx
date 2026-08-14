@@ -1,43 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const Sidebar = ({ setLocation }) => {
   const locationPath = useLocation();
   const navigate = useNavigate();
+  
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
-  // Handle manual city search
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-
-    try {
-      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${searchQuery}&count=1&language=en&format=json`);
-      const data = await res.json();
-      
-      if (data.results && data.results.length > 0) {
-        const { latitude, longitude, name, country } = data.results[0];
-        setLocation({
-          lat: latitude,
-          lon: longitude,
-          name: `${name}, ${country}`
-        });
-        setSearchQuery('');
-        // Instantly route back to dashboard when a new city is searched
-        navigate('/');
-      } else {
-        alert("City not found!");
+  // Autocomplete fetch effect
+  useEffect(() => {
+    const fetchCities = async () => {
+      if (searchQuery.trim().length < 2) {
+        setSuggestions([]);
+        setShowDropdown(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error searching city:", error);
-    }
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${searchQuery}&count=5&language=en&format=json`);
+        const data = await res.json();
+        if (data.results) {
+          setSuggestions(data.results);
+          setShowDropdown(true);
+        } else {
+          setSuggestions([]);
+        }
+      } catch (error) {
+        console.error("Error fetching cities:", error);
+      }
+    };
+
+    // Debounce the API call so it doesn't spam on every single keystroke
+    const debounce = setTimeout(() => {
+      fetchCities();
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  // Click handler for when a user selects a city from the dropdown
+  const handleSelectCity = (city) => {
+    setLocation({
+      lat: city.latitude,
+      lon: city.longitude,
+      name: `${city.name}, ${city.country}`
+    });
+    setSearchQuery('');
+    setShowDropdown(false);
+    navigate('/');
   };
 
-  // Helper to highlight the active menu item
   const isActive = (path) => locationPath.pathname === path;
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col p-4 shadow-sm z-10 hidden md:flex">
+    <div className="w-64 bg-white border-r border-gray-200 flex flex-col p-4 shadow-sm z-50 hidden md:flex">
+      
       {/* Brand Logo */}
       <div className="flex items-center space-x-3 mb-8">
         <div className="bg-indigo-600 p-2 rounded-lg">
@@ -51,19 +70,37 @@ const Sidebar = ({ setLocation }) => {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <form onSubmit={handleSearch} className="mb-8 relative">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input 
-          type="text" 
-          placeholder="Search city..." 
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-        />
-      </form>
+      {/* Search Bar with Dropdown Container */}
+      <div className="mb-8 relative" ref={dropdownRef}>
+        <div className="relative">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input 
+            type="text" 
+            placeholder="Search city..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+          />
+        </div>
+
+        {/* The Autocomplete Dropdown */}
+        {showDropdown && suggestions.length > 0 && (
+          <ul className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+            {suggestions.map((city, index) => (
+              <li 
+                key={index}
+                onClick={() => handleSelectCity(city)}
+                className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
+              >
+                <div className="font-semibold text-gray-800">{city.name}</div>
+                <div className="text-xs text-gray-500">{city.admin1 ? `${city.admin1}, ` : ''}{city.country}</div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Navigation Menu */}
       <div className="flex-1">
