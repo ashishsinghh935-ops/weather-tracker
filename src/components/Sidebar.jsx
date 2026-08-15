@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { cityTrie } from '../utils/Trie'; // NEW: Import your custom data structure
 
 const Sidebar = ({ setLocation }) => {
   const locationPath = useLocation();
@@ -10,46 +11,51 @@ const Sidebar = ({ setLocation }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Autocomplete fetch effect
+  // 1. INSTANT O(L) AUTOCOMPLETE USING THE TRIE
   useEffect(() => {
-    const fetchCities = async () => {
-      if (searchQuery.trim().length < 2) {
-        setSuggestions([]);
-        setShowDropdown(false);
-        return;
-      }
-      try {
-        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${searchQuery}&count=5&language=en&format=json`);
-        const data = await res.json();
-        if (data.results) {
-          setSuggestions(data.results);
-          setShowDropdown(true);
-        } else {
-          setSuggestions([]);
-        }
-      } catch (error) {
-        console.error("Error fetching cities:", error);
-      }
-    };
-
-    // Debounce the API call so it doesn't spam on every single keystroke
-    const debounce = setTimeout(() => {
-      fetchCities();
-    }, 300);
-
-    return () => clearTimeout(debounce);
+    if (searchQuery.trim().length < 1) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
+    
+    // Query the Trie in memory instantly (No debounce needed)
+    const results = cityTrie.searchPrefix(searchQuery);
+    
+    if (results.length > 0) {
+      setSuggestions(results);
+      setShowDropdown(true);
+    } else {
+      setSuggestions([]);
+      setShowDropdown(false);
+    }
   }, [searchQuery]);
 
-  // Click handler for when a user selects a city from the dropdown
-  const handleSelectCity = (city) => {
-    setLocation({
-      lat: city.latitude,
-      lon: city.longitude,
-      name: `${city.name}, ${city.country}`
-    });
+  // 2. FETCH COORDINATES ONLY ON CLICK
+  const handleSelectCity = async (cityName) => {
     setSearchQuery('');
     setShowDropdown(false);
-    navigate('/');
+    
+    try {
+      // Extract just the city name (e.g., "Delhi" from "Delhi, India") for the geocoder
+      const searchName = cityName.split(',')[0].trim();
+      
+      // We only hit the network exactly ONCE when the user makes a choice
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${searchName}&count=1&language=en&format=json`);
+      const data = await res.json();
+      
+      if (data.results && data.results.length > 0) {
+        const city = data.results[0];
+        setLocation({
+          lat: city.latitude,
+          lon: city.longitude,
+          name: cityName
+        });
+        navigate('/');
+      }
+    } catch (error) {
+      console.error("Error fetching coordinates:", error);
+    }
   };
 
   const isActive = (path) => locationPath.pathname === path;
@@ -88,14 +94,13 @@ const Sidebar = ({ setLocation }) => {
         {/* The Autocomplete Dropdown */}
         {showDropdown && suggestions.length > 0 && (
           <ul className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-            {suggestions.map((city, index) => (
+            {suggestions.map((cityName, index) => (
               <li 
                 key={index}
-                onClick={() => handleSelectCity(city)}
+                onClick={() => handleSelectCity(cityName)}
                 className="px-4 py-2 hover:bg-indigo-50 cursor-pointer text-sm border-b border-gray-100 last:border-b-0"
               >
-                <div className="font-semibold text-gray-800">{city.name}</div>
-                <div className="text-xs text-gray-500">{city.admin1 ? `${city.admin1}, ` : ''}{city.country}</div>
+                <div className="font-semibold text-gray-800">{cityName}</div>
               </li>
             ))}
           </ul>
