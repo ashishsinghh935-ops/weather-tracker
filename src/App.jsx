@@ -12,10 +12,17 @@ import MapView from './components/MapView';
 import DashboardSkeleton from './components/DashboardSkeleton';
 
 const App = () => {
-  const [location, setLocation] = useState({
-    lat: 28.6139,
-    lon: 77.2090,
-    name: "Delhi, India"
+  // 1. LAZY INITIALIZATION: Check localStorage first, otherwise fallback to default
+  const [location, setLocation] = useState(() => {
+    const savedLocation = localStorage.getItem('weatherpro_user_location');
+    if (savedLocation) {
+      return JSON.parse(savedLocation);
+    }
+    return {
+      lat: 28.6139,
+      lon: 77.2090,
+      name: "Delhi, India"
+    };
   });
 
   const [weatherData, setWeatherData] = useState(null);
@@ -24,6 +31,12 @@ const App = () => {
   const weatherCache = useRef(new Map());
   const CACHE_LIMIT = 5;
 
+  // 2. PERSISTENCE EFFECT: Save to localStorage every time the user searches a new city
+  useEffect(() => {
+    localStorage.setItem('weatherpro_user_location', JSON.stringify(location));
+  }, [location]);
+
+  // 3. WEATHER API EFFECT: Fetches Open-Meteo data and manages the LRU Cache
   useEffect(() => {
     const fetchWeather = async () => {
       const cacheKey = `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
