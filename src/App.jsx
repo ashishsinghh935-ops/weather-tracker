@@ -12,31 +12,25 @@ import MapView from './components/MapView';
 import DashboardSkeleton from './components/DashboardSkeleton';
 
 const App = () => {
-  // 1. LAZY INITIALIZATION: Check localStorage first, otherwise fallback to default
   const [location, setLocation] = useState(() => {
     const savedLocation = localStorage.getItem('weatherpro_user_location');
     if (savedLocation) {
       return JSON.parse(savedLocation);
     }
-    return {
-      lat: 28.6139,
-      lon: 77.2090,
-      name: "Delhi, India"
-    };
+    return { lat: 28.6139, lon: 77.2090, name: "Delhi, India" };
   });
 
   const [weatherData, setWeatherData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // NEW: Mobile menu state
 
   const weatherCache = useRef(new Map());
   const CACHE_LIMIT = 5;
 
-  // 2. PERSISTENCE EFFECT: Save to localStorage every time the user searches a new city
   useEffect(() => {
     localStorage.setItem('weatherpro_user_location', JSON.stringify(location));
   }, [location]);
 
-  // 3. WEATHER API EFFECT: Fetches Open-Meteo data and manages the LRU Cache
   useEffect(() => {
     const fetchWeather = async () => {
       const cacheKey = `${location.lat.toFixed(2)},${location.lon.toFixed(2)}`;
@@ -45,7 +39,6 @@ const App = () => {
         const cachedData = weatherCache.current.get(cacheKey);
         weatherCache.current.delete(cacheKey);
         weatherCache.current.set(cacheKey, cachedData);
-        
         setWeatherData(cachedData);
         setLoading(false);
         return; 
@@ -64,7 +57,6 @@ const App = () => {
 
         weatherCache.current.set(cacheKey, data);
         setWeatherData(data);
-        
       } catch (error) {
         console.error("Error fetching weather data:", error);
       } finally {
@@ -75,20 +67,37 @@ const App = () => {
     fetchWeather();
   }, [location]);
 
-  // Determine if it is currently day or night from Open-Meteo's current_weather payload (1 = day, 0 = night)
   const isDay = weatherData?.current?.is_day ?? weatherData?.current_weather?.is_day ?? 1;
 
   return (
-    // Dynamic Root Background Theme mapping to Day or Night state
-    <div className={`flex h-screen font-sans transition-colors duration-500 ${
+    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${
       isDay ? 'bg-gray-100 text-gray-900' : 'bg-slate-950 text-slate-100'
     }`}>
       
-      <Sidebar setLocation={setLocation} isDay={isDay} />
+      {/* Mobile Top Header (Only visible on small screens) */}
+      <div className="md:hidden absolute top-0 left-0 w-full z-40 flex items-center justify-between p-4 bg-white/10 backdrop-blur-md border-b border-gray-200/20">
+        <div className="font-bold text-lg tracking-wide">WeatherPro</div>
+        <button 
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 rounded-lg bg-indigo-500 text-white shadow-md"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+      {/* Sidebar now accepts the mobile state props */}
+      <Sidebar 
+        setLocation={setLocation} 
+        isDay={isDay} 
+        isMobileMenuOpen={isMobileMenuOpen} 
+        setIsMobileMenuOpen={setIsMobileMenuOpen} 
+      />
+
+      {/* Added pt-16 to push content down below the new mobile header */}
+      <div className="flex-1 overflow-y-auto p-4 pt-20 md:pt-8 md:p-8">
         <Routes>
-          
           <Route path="/" element={
             <div className="max-w-6xl mx-auto space-y-6">
               {loading ? (
@@ -104,11 +113,7 @@ const App = () => {
               )}
             </div>
           } />
-
-          <Route path="/map" element={
-            <MapView location={location} setLocation={setLocation} weatherData={weatherData} />
-          } />
-          
+          <Route path="/map" element={<MapView location={location} setLocation={setLocation} weatherData={weatherData} />} />
         </Routes>
       </div>
     </div>
