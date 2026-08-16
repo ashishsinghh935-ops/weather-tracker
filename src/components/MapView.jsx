@@ -108,12 +108,15 @@ const LocationMarker = ({ setLocation, navigate }) => {
 const MapView = ({ location, setLocation, weatherData }) => {
   const navigate = useNavigate();
   const [isLocating, setIsLocating] = useState(false);
-  const [showRadar, setShowRadar] = useState(false); // Renamed state to represent multi-weather radar
+  const [showRadar, setShowRadar] = useState(false); 
 
   // Extract all three physics variables from the payload
   const actualWindSpeed = weatherData?.current?.wind_speed_10m || 0;
   const actualWindDirection = weatherData?.current?.wind_direction_10m || 0;
   const actualWeatherCode = weatherData?.current?.weather_code || 0;
+
+  // NEW: Extract isDay status for dynamic dark mode map tiles
+  const isDay = weatherData?.current?.is_day ?? weatherData?.current_weather?.is_day ?? 1;
 
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
@@ -158,7 +161,6 @@ const MapView = ({ location, setLocation, weatherData }) => {
       
       <div className="flex-1 w-full rounded-xl overflow-hidden border border-gray-200 shadow-sm z-0 relative min-h-[600px]">
         
-        {/* The new upgraded multi-weather physics engine */}
         {showRadar && (
           <WindLayer 
             windSpeed={actualWindSpeed} 
@@ -190,7 +192,6 @@ const MapView = ({ location, setLocation, weatherData }) => {
           )}
         </button>
 
-        {/* Global Weather Radar Toggle */}
         <button 
           onClick={() => setShowRadar(!showRadar)}
           className={`absolute top-20 right-4 z-[400] p-3 rounded-full shadow-lg border transition-all group flex items-center justify-center cursor-pointer ${showRadar ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-gray-200 hover:bg-gray-50'}`}
@@ -206,9 +207,14 @@ const MapView = ({ location, setLocation, weatherData }) => {
           zoom={10} 
           style={{ height: '100%', width: '100%', zIndex: 0 }}
         >
+          {/* UPGRADED: Dynamic Tile Swapping for Dark Mode vs Light Mode */}
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution={isDay ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' : '&copy; CARTO'}
+            url={
+              isDay 
+                ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            }
           />
           
           <MapUpdater lat={location.lat} lon={location.lon} />
