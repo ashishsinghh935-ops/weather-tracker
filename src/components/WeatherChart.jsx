@@ -1,111 +1,154 @@
-import { useState, useEffect } from 'react';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Filler,
-  Legend,
-} from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import React from 'react';
+import { motion } from 'framer-motion';
 
-// Register the Chart.js engine elements
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Filler,
-  Legend
-);
+const WeatherChart = ({ hourlyData, isDay }) => {
+  if (!hourlyData || !hourlyData.time || !hourlyData.temperature_2m) return null;
 
-const WeatherChart = ({ location }) => {
-  const [chartData, setChartData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // 1. Isolate the next 24 hours of data
+  const now = new Date();
+  const currentIndex = hourlyData.time.findIndex(t => new Date(t) >= now);
+  const startIndex = currentIndex !== -1 ? currentIndex : 0;
+  const dataPoints = hourlyData.temperature_2m.slice(startIndex, startIndex + 24);
+  const times = hourlyData.time.slice(startIndex, startIndex + 24);
 
-  useEffect(() => {
-    const fetchHourlyData = async () => {
-      setIsLoading(true); // Reset loading state when fetching new city
-      try {
-        // Fetch 24-hour forecast using the dynamic location prop!
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&hourly=temperature_2m&forecast_days=1`;
-        const response = await fetch(url);
-        const data = await response.json();
+  if (dataPoints.length === 0) return null;
 
-        // Format timestamps (e.g., "14:00")
-        const labels = data.hourly.time.map(timeStr => {
-          const date = new Date(timeStr);
-          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        });
+  // 2. Dynamic SVG Coordinate Mapping
+  const width = 900;
+  const height = 250;
+  const padding = 50;
+  
+  const minTemp = Math.min(...dataPoints) - 2;
+  const maxTemp = Math.max(...dataPoints) + 2;
+  const tempRange = maxTemp - minTemp || 1;
 
-        const temperatures = data.hourly.temperature_2m;
+  const points = dataPoints.map((temp, index) => {
+    const x = padding + (index / (dataPoints.length - 1)) * (width - padding * 2);
+    const y = height - padding - ((temp - minTemp) / tempRange) * (height - padding * 2);
+    return { x, y, temp, time: times[index] };
+  });
 
-        // Configure the dataset for Chart.js
-        setChartData({
-          labels: labels,
-          datasets: [
-            {
-              label: 'Temperature (°C)',
-              data: temperatures,
-              borderColor: '#8b5cf6', // Tailwind violet-500
-              backgroundColor: 'rgba(139, 92, 246, 0.1)',
-              borderWidth: 3,
-              tension: 0.4, // Makes the line curved and smooth
-              fill: true,
-              pointBackgroundColor: '#ffffff',
-              pointBorderColor: '#8b5cf6',
-              pointRadius: 4,
-            },
-          ],
-        });
-        setIsLoading(false);
-      } catch (error) {
-        console.error("Chart Error:", error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchHourlyData();
-  }, [location]); // <--- React re-runs the fetch every time the location changes
-
-  // Make the chart look clean and remove grid lines
-  const options = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        padding: 12,
-        titleFont: { size: 14 },
-        bodyFont: { size: 14 },
-      },
-    },
-    scales: {
-      y: { grid: { display: true, color: '#f1f5f9' }, border: { display: false } },
-      x: { grid: { display: false }, border: { display: false }, ticks: { maxTicksLimit: 8 } },
-    },
+  // 3. Custom Bezier Curve Generator for a smooth, premium line
+  const createCurve = (points) => {
+    if (points.length === 0) return "";
+    let path = `M ${points[0].x},${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const xCenter = (points[i].x + points[i + 1].x) / 2;
+      path += ` C ${xCenter},${points[i].y} ${xCenter},${points[i+1].y} ${points[i+1].x},${points[i+1].y}`;
+    }
+    return path;
   };
 
+  const linePath = createCurve(points);
+  const areaPath = `${linePath} L ${points[points.length - 1].x},${height - padding} L ${points[0].x},${height - padding} Z`;
+
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mt-6 h-96 flex flex-col">
-      <h3 className="text-lg font-bold text-slate-800 mb-4">24-Hour Temperature Trend</h3>
-      <div className="flex-1 relative w-full h-full">
-        {isLoading || !chartData ? (
-          <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-            <i className="fa-solid fa-circle-notch fa-spin text-2xl mr-3"></i>
-            <span className="font-medium">Loading Analytics...</span>
-          </div>
-        ) : (
-          <Line data={chartData} options={options} />
-        )}
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className={`w-full p-6 md:p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border backdrop-blur-xl ${
+        isDay ? 'bg-white/70 border-white/40' : 'bg-[#18181b]/70 border-zinc-800/50'
+      }`}
+    >
+      <h3 className={`text-lg font-extrabold mb-6 tracking-wide ${isDay ? 'text-gray-900' : 'text-zinc-100'}`}>
+        24-Hour Temperature Trend
+      </h3>
+      
+      <div className="w-full overflow-x-auto overflow-y-hidden custom-scrollbar">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full min-w-[700px] h-auto drop-shadow-lg overflow-visible">
+          <defs>
+            <linearGradient id="gradientFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={isDay ? "#4f46e5" : "#818cf8"} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={isDay ? "#4f46e5" : "#818cf8"} stopOpacity="0.0" />
+            </linearGradient>
+          </defs>
+
+          {/* Background Grid Lines */}
+          {[...Array(5)].map((_, i) => {
+            const y = padding + (i / 4) * (height - padding * 2);
+            return (
+              <line 
+                key={i} x1={padding} y1={y} x2={width - padding} y2={y} 
+                stroke={isDay ? "#e5e7eb" : "#3f3f46"} strokeWidth="1.5" strokeDasharray="6 6" 
+                opacity="0.6"
+              />
+            );
+          })}
+
+          {/* 1. The Area Fill (Fades in slowly after the line draws) */}
+          <motion.path
+            d={areaPath}
+            fill="url(#gradientFill)"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.5, delay: 1.2 }} // Waits for line to draw
+          />
+
+          {/* 2. The Cinematic SVG Line Draw */}
+          <motion.path
+            d={linePath}
+            fill="none"
+            stroke={isDay ? "#4f46e5" : "#818cf8"}
+            strokeWidth="5"
+            strokeLinecap="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.8, ease: "easeInOut" }} // Smooth 1.8s draw
+          />
+
+          {/* 3. Data Points & Labels (Staggered spring pop-in) */}
+          {points.map((p, i) => (
+            <g key={i}>
+              <motion.circle
+                cx={p.x}
+                cy={p.y}
+                r="6"
+                fill={isDay ? "#ffffff" : "#18181b"}
+                stroke={isDay ? "#4f46e5" : "#818cf8"}
+                strokeWidth="3"
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 1.5 + i * 0.05, type: "spring", stiffness: 400 }}
+              />
+              
+              {/* Only show temperature and time labels for every 3rd point to keep it clean */}
+              {i % 3 === 0 && (
+                <>
+                  <motion.text
+                    x={p.x}
+                    y={p.y - 18}
+                    textAnchor="middle"
+                    fill={isDay ? "#1f2937" : "#f4f4f5"}
+                    fontSize="13"
+                    fontWeight="bold"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.8 + i * 0.03 }}
+                  >
+                    {Math.round(p.temp)}°
+                  </motion.text>
+                  
+                  <motion.text
+                    x={p.x}
+                    y={height - 15}
+                    textAnchor="middle"
+                    fill={isDay ? "#6b7280" : "#a1a1aa"}
+                    fontSize="11"
+                    fontWeight="600"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 2 }}
+                  >
+                    {new Date(p.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </motion.text>
+                </>
+              )}
+            </g>
+          ))}
+        </svg>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
