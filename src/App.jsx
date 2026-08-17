@@ -8,6 +8,7 @@ import WeatherMap from './components/WeatherMap';
 import AirQualityCard from './components/AirQualityCard';
 import MapView from './components/MapView';
 import DashboardSkeleton from './components/DashboardSkeleton';
+import AmbientBackground from './components/AmbientBackground'; // NEW: Import Ambient Engine
 
 const App = () => {
   const [location, setLocation] = useState(() => {
@@ -54,13 +55,16 @@ const App = () => {
   }, [location]);
 
   const isDay = weatherData?.current?.is_day ?? weatherData?.current_weather?.is_day ?? 1;
+  const weatherCode = weatherData?.current?.weather_code ?? weatherData?.current_weather?.weathercode ?? 0;
 
   return (
-    // UPGRADED: Premium Zinc Dark Mode (zinc-950)
-    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-500 ${
+    <div className={`flex h-screen w-full overflow-hidden font-sans transition-colors duration-1000 relative ${
       isDay ? 'bg-gray-50 text-gray-900' : 'bg-zinc-950 text-zinc-100'
     }`}>
       
+      {/* 🚀 NEW: The Ambient Background Layer */}
+      <AmbientBackground weatherCode={weatherCode} isDay={isDay} />
+
       <div className="md:hidden absolute top-0 left-0 w-full z-40 flex items-center justify-between p-4 bg-white/10 backdrop-blur-md border-b border-gray-200/20">
         <div className="font-bold text-lg tracking-wide">WeatherPro</div>
         <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 rounded-lg bg-indigo-500 text-white shadow-md">
@@ -70,7 +74,8 @@ const App = () => {
 
       <Sidebar setLocation={setLocation} isDay={isDay} isMobileMenuOpen={isMobileMenuOpen} setIsMobileMenuOpen={setIsMobileMenuOpen} />
 
-      <div className="flex-1 overflow-y-auto p-4 pt-20 md:pt-8 md:p-8">
+      {/* Added relative z-10 so the content sits ABOVE the ambient weather */}
+      <div className="flex-1 overflow-y-auto p-4 pt-20 md:pt-8 md:p-8 relative z-10">
         <Routes>
           <Route path="/" element={
             <div className="max-w-6xl mx-auto space-y-6">
