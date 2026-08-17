@@ -5,52 +5,114 @@ import { cityTrie } from '../utils/Trie';
 const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) => {
   const locationPath = useLocation();
   const navigate = useNavigate();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const dropdownRef = useRef(null);
 
+  // HYBRID AUTOCOMPLETE: Trie (Instant) + Debounced API (Global)
   useEffect(() => {
-    if (searchQuery.trim().length < 1) {
+    if (searchQuery.trim().length < 2) {
       setSuggestions([]);
       setShowDropdown(false);
       return;
     }
-    const results = cityTrie.searchPrefix(searchQuery);
-    if (results.length > 0) {
-      setSuggestions(results);
+
+    // 1. Instant Local Trie Search
+    const localResults = cityTrie.searchPrefix(searchQuery).map(name => ({
+      name,
+      isLocal: true 
+    }));
+    
+    if (localResults.length > 0) {
+      setSuggestions(localResults);
       setShowDropdown(true);
-    } else {
-      setSuggestions([]);
-      setShowDropdown(false);
     }
+
+    // 2. Debounced Global API Search (400ms delay)
+    const delayDebounceFn = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchQuery)}&count=5&language=en&format=json`);
+        const data = await res.json();
+        
+        if (data.results) {
+          const apiResults = data.results.map(city => ({
+            name: city.admin1 ? `${city.name}, ${city.admin1}, ${city.country}` : `${city.name}, ${city.country}`,
+            lat: city.latitude,
+            lon: city.longitude,
+            isLocal: false // Flag to know we already have coordinates!
+          }));
+
+          // Merge local and API results, removing exact duplicates
+          setSuggestions(prev => {
+             const merged = [...prev, ...apiResults];
+             const uniqueNames = new Set();
+             return merged.filter(item => {
+               if(uniqueNames.has(item.name)) return false;
+               uniqueNames.add(item.name);
+               return true;
+             }).slice(0, 6); // Keep the top 6 cleanest results
+          });
+          setShowDropdown(true);
+        }
+      } catch (error) {
+        console.error("Geocoding API error:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 400); 
+
+    // Cleanup function clears the timeout if user keeps typing
+    return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  // Performs direct geocoding search on Open-Meteo API
-  const executeSearch = async (queryText) => {
-    if (!queryText.trim()) return;
+  // Click Handler for Dropdown Suggestions
+  const handleSelectCity = async (cityObj) => {
+    setSearchQuery('');
+    setShowDropdown(false);
+    if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
 
+    // O(1) Routing: If it came from the API, we already have the exact coordinates!
+    if (!cityObj.isLocal && cityObj.lat && cityObj.lon) {
+      setLocation({ lat: cityObj.lat, lon: cityObj.lon, name: cityObj.name });
+      navigate('/');
+      return;
+    }
+
+    // Fallback: If it came from the local Trie, fetch its coordinates
     setIsSearching(true);
     try {
-      const searchName = queryText.split(',')[0].trim();
-      const res = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=1&language=en&format=json`
-      );
+      const searchName = cityObj.name.split(',')[0].trim();
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchName)}&count=1&language=en&format=json`);
+      const data = await res.json();
+      
+      if (data.results && data.results.length > 0) {
+        const city = data.results[0];
+        setLocation({ lat: city.latitude, lon: city.longitude, name: cityObj.name });
+        navigate('/');
+      }
+    } catch (error) {
+       console.error("Error fetching fallback coordinates:", error);
+    } finally {
+       setIsSearching(false);
+    }
+  };
+
+  // Fallback: If user hits Enter directly without clicking a suggestion
+  const executeDirectSearch = async (queryText) => {
+    if (!queryText.trim()) return;
+    setIsSearching(true);
+    try {
+      const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(queryText)}&count=1&language=en&format=json`);
       const data = await res.json();
 
       if (data.results && data.results.length > 0) {
         const city = data.results[0];
-        const formattedName = city.admin1 
-          ? `${city.name}, ${city.admin1}, ${city.country}` 
-          : `${city.name}, ${city.country}`;
-
-        setLocation({
-          lat: city.latitude,
-          lon: city.longitude,
-          name: formattedName
-        });
-
+        const formattedName = city.admin1 ? `${city.name}, ${city.admin1}, ${city.country}` : `${city.name}, ${city.country}`;
+        setLocation({ lat: city.latitude, lon: city.longitude, name: formattedName });
         setSearchQuery('');
         setShowDropdown(false);
         if (setIsMobileMenuOpen) setIsMobileMenuOpen(false);
@@ -59,7 +121,7 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
         alert(`Location "${queryText}" not found. Please try another name.`);
       }
     } catch (error) {
-      console.error("Error fetching coordinates:", error);
+      console.error("Error:", error);
     } finally {
       setIsSearching(false);
     }
@@ -68,7 +130,7 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      executeSearch(searchQuery);
+      executeDirectSearch(searchQuery);
     }
   };
 
@@ -77,10 +139,7 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
   return (
     <>
       {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" 
-          onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
+        <div className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)}></div>
       )}
 
       <div className={`fixed inset-y-0 left-0 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition-all duration-500 ease-in-out z-50 w-72 md:w-64 border-r flex flex-col p-4 shadow-2xl md:shadow-sm ${
@@ -89,17 +148,13 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
         
         <div className="flex justify-end md:hidden mb-2">
           <button onClick={() => setIsMobileMenuOpen(false)} className={isDay ? 'text-gray-500' : 'text-zinc-400'}>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
         <div className="flex items-center space-x-3 mb-8">
           <div className="bg-indigo-600 p-2 rounded-lg shadow-lg shadow-indigo-500/30">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" /></svg>
           </div>
           <div>
             <h1 className="text-xl font-bold leading-tight">WeatherPro</h1>
@@ -107,15 +162,12 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
           </div>
         </div>
 
-        {/* Global Search Input with Enter Support */}
         <div className="mb-8 relative" ref={dropdownRef}>
           <div className="relative flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
             <input 
               type="text" 
-              placeholder="Search any city & hit Enter..." 
+              placeholder="Search any city..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -137,15 +189,21 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
             <ul className={`absolute top-full left-0 right-0 mt-2 rounded-lg shadow-xl z-50 overflow-hidden max-h-60 overflow-y-auto border ${
               isDay ? 'bg-white border-gray-200' : 'bg-[#27272a] border-zinc-700'
             }`}>
-              {suggestions.map((cityName, index) => (
+              {suggestions.map((cityObj, index) => (
                 <li 
                   key={index} 
-                  onClick={() => executeSearch(cityName)}
-                  className={`px-4 py-3 md:py-2 cursor-pointer text-sm border-b last:border-b-0 ${
+                  // Pass the entire object to the click handler now!
+                  onClick={() => handleSelectCity(cityObj)}
+                  className={`px-4 py-3 md:py-2 cursor-pointer text-sm border-b last:border-b-0 flex items-center justify-between ${
                     isDay ? 'hover:bg-indigo-50 border-gray-100 text-gray-800' : 'hover:bg-zinc-700 border-zinc-700 text-zinc-200'
                   }`}
                 >
-                  <div className="font-semibold">{cityName}</div>
+                  <div className="font-semibold">{cityObj.name}</div>
+                  {!cityObj.isLocal && (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-indigo-400 opacity-50" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </li>
               ))}
             </ul>
@@ -155,33 +213,21 @@ const Sidebar = ({ setLocation, isDay, isMobileMenuOpen, setIsMobileMenuOpen }) 
         <div className="flex-1">
           <p className={`text-xs font-bold mb-4 tracking-wider ${isDay ? 'text-gray-400' : 'text-zinc-500'}`}>MENU</p>
           <nav className="space-y-2">
-            <Link 
-              to="/" 
-              onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
+            <Link to="/" onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
               className={`flex items-center space-x-3 px-4 py-3 md:py-2.5 rounded-lg transition-colors duration-200 ${
-                isActive('/') 
-                  ? (isDay ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'bg-indigo-500/20 text-indigo-300 font-semibold') 
-                  : (isDay ? 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' : 'text-zinc-400 hover:bg-[#27272a] hover:text-zinc-200')
+                isActive('/') ? (isDay ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'bg-indigo-500/20 text-indigo-300 font-semibold') : (isDay ? 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' : 'text-zinc-400 hover:bg-[#27272a] hover:text-zinc-200')
               }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
               <span>Dashboard</span>
             </Link>
 
-            <Link 
-              to="/map" 
-              onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
+            <Link to="/map" onClick={() => setIsMobileMenuOpen && setIsMobileMenuOpen(false)}
               className={`flex items-center space-x-3 px-4 py-3 md:py-2.5 rounded-lg transition-colors duration-200 ${
-                isActive('/map') 
-                  ? (isDay ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'bg-indigo-500/20 text-indigo-300 font-semibold') 
-                  : (isDay ? 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' : 'text-zinc-400 hover:bg-[#27272a] hover:text-zinc-200')
+                isActive('/map') ? (isDay ? 'bg-indigo-50 text-indigo-700 font-semibold' : 'bg-indigo-500/20 text-indigo-300 font-semibold') : (isDay ? 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' : 'text-zinc-400 hover:bg-[#27272a] hover:text-zinc-200')
               }`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-              </svg>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" /></svg>
               <span>Weather Map</span>
             </Link>
           </nav>
