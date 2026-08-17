@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const getWeatherCondition = (code) => {
   if (code === 0) return { icon: '☀️', text: 'Clear' };
@@ -21,13 +22,29 @@ const HeroCard = ({ weatherData, locationName }) => {
   const condition = getWeatherCondition(weatherCode);
 
   return (
-    <div className="w-full relative overflow-hidden rounded-3xl p-6 md:p-8 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 backdrop-blur-xl bg-gradient-to-br from-indigo-600/90 via-purple-600/80 to-fuchsia-500/90">
+    <motion.div 
+      // 1. SPRING PHYSICS ENTRANCE ANIMATION
+      initial={{ opacity: 0, y: 40 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 260, 
+        damping: 20, 
+        delay: 0.1 
+      }}
+      // 2. TACTILE HOVER EFFECT
+      whileHover={{ 
+        scale: 1.02,
+        y: -5,
+        boxShadow: "0px 20px 40px rgba(0,0,0,0.2)"
+      }}
+      className="w-full relative overflow-hidden rounded-3xl p-6 md:p-8 text-white shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/20 backdrop-blur-xl bg-gradient-to-br from-indigo-600/90 via-purple-600/80 to-fuchsia-500/90 cursor-default"
+    >
       
       <div className="absolute -top-12 -right-12 md:-top-24 md:-right-24 w-40 h-40 md:w-64 md:h-64 bg-white/20 rounded-full blur-2xl md:blur-3xl pointer-events-none"></div>
       <div className="absolute -bottom-12 -left-12 md:-bottom-24 md:-left-24 w-32 h-32 md:w-48 md:h-48 bg-indigo-300/20 rounded-full blur-xl md:blur-2xl pointer-events-none"></div>
       <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full h-full bg-gradient-to-b from-transparent to-black/10 pointer-events-none"></div>
       
-      {/* UPGRADED: Flex column on mobile, row on desktop, centered appropriately */}
       <div className="relative z-10 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-4 md:gap-6">
         <div className="flex flex-col items-center md:items-start w-full">
           
@@ -39,7 +56,6 @@ const HeroCard = ({ weatherData, locationName }) => {
             <h2 className="text-sm font-bold tracking-widest uppercase text-indigo-100 drop-shadow-sm">{locationName}</h2>
           </div>
           
-          {/* UPGRADED: text-5xl on mobile, text-7xl on desktop */}
           <div className="text-5xl md:text-7xl font-extrabold mb-1 md:mb-2 tracking-tighter drop-shadow-lg">
             {temp !== undefined && temp !== null ? Math.round(temp) : "--"}°C
           </div>
@@ -65,12 +81,16 @@ const HeroCard = ({ weatherData, locationName }) => {
           </div>
         </div>
         
-        {/* UPGRADED: text-7xl on mobile, text-9xl on desktop */}
-        <div className="text-7xl md:text-9xl drop-shadow-[0_15px_35px_rgba(0,0,0,0.3)] transform hover:scale-110 transition-transform duration-500 cursor-default mt-4 md:mt-0">
+        {/* 3. NESTED ANIMATION FOR THE WEATHER ICON */}
+        <motion.div 
+          animate={{ y: [0, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+          className="text-7xl md:text-9xl drop-shadow-[0_15px_35px_rgba(0,0,0,0.3)] mt-4 md:mt-0"
+        >
           {condition.icon}
-        </div>
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
